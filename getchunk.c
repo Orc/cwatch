@@ -95,7 +95,7 @@ newchunk(FILE *file, char *eol)
 	       && (tmp->buf = mmap(0, st.st_size,
 			PROT_READ, MAP_SHARED, fileno(file), 0)) ) {
 	    tmp->flag |= MMAPPED;
-	    tmp->end = st.st_size;
+	    tmp->size = tmp->end = st.st_size;
 	    return tmp;
 	}
 #endif
@@ -122,9 +122,9 @@ getchunk(CHUNK *f, int *size)
 
 #if HAVE_MMAP
     if (f->flag & MMAPPED) {
-	if (f->start >= f->end)
+	if (f->start >= f->size)
 	    return 0;
-	rc = pcre_exec(f->eol,0,f->buf,f->end-f->start,f->start,0,argv,3);
+	rc = pcre_exec(f->eol,0,f->buf,f->size,f->start,0,argv,3);
     }
     else
 #endif

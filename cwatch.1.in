@@ -97,20 +97,20 @@ is called without any input option, it defaults to
 .IR "\-t /var/log/syslog" .
 .TP
 .B \--daemon
-Run 
+When this option is given, 
 .B cwatch
-as a daemon \-- if a 
+will exit when it receives a
 .B SIGHUP
 or
-.B SIGALRM
-signal is received, it gracefully exits.
-.TP
+.B
+SIGALRM
+signal.   (This means that the
+--restart-time option
+.RI ( not\ implemented )
+will not work with --daemon.)
+.tp
 .BI \--pid-file \ file
-When 
-.B cwatch
-is running as a daemon (see the
-.I \--daemon
-option, above), write the process id of the supervisor process to
+Write the process id of the supervisor process to
 .I file
 as a human-readable string suitable for passing as an argument to
 a program (like, oh,
@@ -123,7 +123,8 @@ a program (like, oh,
 attempts to closely follow the format of the
 .B swatch
 .RI ( v3 )
-configuration file, but is not quite the same.
+configuration file, with some differences having to do with
+how it parses the configuration files.
 
 A configuration file is made up of a series of patterns with
 actions associated with them.  The patterns are either

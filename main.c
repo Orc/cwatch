@@ -94,6 +94,13 @@ struct x_option opts[] = {
 
 extern void showopts(FILE*, int, struct x_option*);
 
+void
+usage(int rc)
+{
+    fprintf(stderr, "usage: %s [options]\n", pgm);
+    showopts(stderr, NROPTS, opts);
+    exit(rc);
+}
 
 void
 getoptionsandscript(int argc, char **argv)
@@ -115,23 +122,19 @@ getoptionsandscript(int argc, char **argv)
 	case 'D':	Dflag = 1; break;
 	case '!':	pidfile = x_optarg; break;
 	case 'F':	eol = x_optarg; break;
-	default:	fprintf(stderr, "usage: %s [options]\n", pgm);
-	case '?':	showopts(stderr, NROPTS, opts);
-			exit( !(opt=='?') );
+	default:	usage( !(opt=='?') );
 	}
     }
     if ( (reol = pcre_compile(eol, 0, &whine, &where, 0)) == 0) {
-	fprintf(stderr, "%s: %s (%s)\n", pgm, whine, eol);
+	fprintf(stderr, "%s: (-F %s): %s\n", pgm, eol, whine);
 	exit(1);
     }
 
-    switch (tflag + pflag + fflag) {
-    case 0 :	tflag = 1;
+    switch (tflag + pflag + fflag + Dflag) {
+    case 0 : 	tflag = 1;
     case 1 :	break;
-    default:	fprintf(stderr, "%s: can only use one of -t, -p, -f\n", pgm);
-		fprintf(stderr, "usage: %s [options]\n", pgm);
-		showopts(stderr, NROPTS, opts);
-		exit(1);
+    default:	fprintf(stderr, "%s: can only use one of -t, -p, -f, or --dump-script\n", pgm);
+		usage(1);
     }
 }
 
@@ -507,6 +510,7 @@ main(int argc, char **argv)
 {
     struct pattern *p;
     time_t t;
+    int isadaemon = 0;
 
 #ifdef HAVE_BASENAME
     pgm = basename(argv[0]);
@@ -518,6 +522,8 @@ main(int argc, char **argv)
 #endif
 
     getoptionsandscript(argc, argv);
+
+    isadaemon = (tflag | pflag) && !(Dflag || fflag || dflag);
 
     /* don't buffer output when it's going to a file
      */
@@ -541,7 +547,7 @@ main(int argc, char **argv)
 
     /* print out a nice little banner
      */
-    if (!Dflag) {
+    if (tflag || pflag) {
 	time(&t);
 	printf("*** cwatch "VERSION" (pid:%d) started at %s",
 		getpid(), ctime(&t));
@@ -550,7 +556,7 @@ main(int argc, char **argv)
     /* if it's NOT running as a daemon, fork off a child and restart
      * it if we get a HUP or ALRM.
      */
-    while ( (tflag || pflag) && !(dflag || Dflag) ) {
+    while (isadaemon) {
 	int status;
 	pid_t pid;
 	pid_t rc;
@@ -577,6 +583,9 @@ main(int argc, char **argv)
 	else do {
 	    rc = wait(&status);
 	} while (rc != pid && kill(pid, 0) == 0);
+	time(&t);
+	printf("*** cwatch "VERSION" (pid:%d) restarted at %s",
+		getpid(), ctime(&t));
     }
     /* when cwatch is running, any kill makes it die */
     signal(SIGTERM, cleanup);
@@ -608,10 +617,8 @@ main(int argc, char **argv)
 		exit(0);
 	    }
 
-    if ( (p = compile()) == 0 || errors)  {
-	fprintf(stderr, "%s: all die.  Oh, the embarrassment!\n", pgm);
+    if ( (p = compile()) == 0 || errors) 
 	exit(1);
-    }
 
     if (Dflag)
 	dump(p);
