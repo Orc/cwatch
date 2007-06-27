@@ -1,4 +1,4 @@
-#   @(#) configure.inc 1.13@(#)
+#   @(#) configure.inc 1.17@(#)
 #   Copyright (c) 1999 David Parsons. All rights reserved.
 #   
 #   Redistribution and use in source and binary forms, with or without
@@ -150,7 +150,7 @@ while [ $# -gt 0 ]; do
 	exit 0;;
 
     *)	if [ "$LOCAL_AC_OPTIONS" ]; then
-	    eval $LOCAL_AC_OPTIONS
+	    eval "$LOCAL_AC_OPTIONS"
 	else
 	    ac_error=T
 	fi
@@ -527,20 +527,19 @@ AC_LIBRARY() {
 
     # first see if the function can be found in any of the
     # current libraries
-    if _sssh=T AC_CHECK_FUNCS $SRC; then
-	return 0
-    fi
+    _sssh=T
+    AC_CHECK_FUNCS $SRC && return 0
 
-    LOGN "checking for $SRC "
     # then search through the list of libraries
+    __libs="$LIBS"
     for x in $*; do
-	if LIBS="$LIBS $x" _sssh=T AC_CHECK_FUNCS $SRC; then
-	    LOG "(library $x)"
+	_sssh=T
+	LIBS="$__libs $x"
+	if AC_CHECK_FUNCS $SRC; then
 	    AC_LIBS="$AC_LIBS $x"
 	    return 0
 	fi
     done
-    LOG "(not found)"
     return 1
 }
 
@@ -556,7 +555,6 @@ AC_PROG_LEX() {
 	AC_MAK LEX
 	AC_DEFINE PATH_LEX \"$DEST\"
 	AC_SUB 'LEX' "$DEST"
-	TLOG "($DEST)"
 	echo "lex is $DEST"
     else
 	DEST=`acLookFor flex`
@@ -565,7 +563,6 @@ AC_PROG_LEX() {
 	    AC_DEFINE 'LEX' \"$DEST\"
 	    AC_SUB 'LEX', "$DEST"
 	    echo "lex is $DEST"
-	    TLOG "($DEST)"
 	else
 	    AC_SUB LEX ''
 	    echo "neither lex or flex found"
@@ -573,8 +570,12 @@ AC_PROG_LEX() {
 	    return 1
 	fi
     fi
-    AC_LIBRARY yywrap -ll -lfl && return 0
-    LOG "Found $DEST, but no associated library"
+
+    if AC_LIBRARY yywrap -ll -lfl; then
+	TLOG "($DEST)"
+	return 0
+    fi
+    TLOG "(no lex library found)"
     return 1
 }
 
@@ -842,7 +843,10 @@ AC_PROG_CPP () {
     if [ "$AC_CPP_PROG" ]; then
 	DEST=$AC_CPP_PROG
     else
-	DEST=`AC_PATH=/lib:/usr/lib:${AC_PATH:-$ac_default_path} acLookFor cpp`
+	__ac_path="$AC_PATH"
+	AC_PATH="/lib:/usr/lib:${__ac_path:-$ac_default_path}"
+	DEST=`acLookFor cpp`
+	AC_PATH="$__ac_path"
     fi
 
     unset fail

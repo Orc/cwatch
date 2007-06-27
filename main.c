@@ -465,7 +465,6 @@ yyerror(char *s)
 void
 alldie(int sig)
 {
-    fprintf(stderr, "alldie called\n");
     signal(sig, SIG_IGN);
     kill(0, sig);
     exit(0);
@@ -481,8 +480,6 @@ restart(int sig)
     typedef void (*handler)(int);
     handler hupsig = signal(SIGHUP, SIG_IGN);
     handler termsig = signal(SIGTERM, SIG_IGN);
-
-    fprintf(stderr, "restart called\n");
 
     kill(0, SIGHUP);
     sleep(1);
@@ -500,7 +497,6 @@ restart(int sig)
 void
 cleanup(int sig)
 {
-    fprintf(stderr, "cleanup called\n");
     if (pipefd) pclose(pipefd);
     exit(0);
 } /* cleanup */
@@ -510,6 +506,7 @@ float
 main(int argc, char **argv)
 {
     struct pattern *p;
+    time_t t;
 
 #ifdef HAVE_BASENAME
     pgm = basename(argv[0]);
@@ -527,6 +524,26 @@ main(int argc, char **argv)
     if (!isatty(fileno(stdout)))
 	setbuf(stdout, 0);
 
+    /* write out the pidfile if needed
+     */
+    if (pidfile) {
+	FILE *pf = fopen(pidfile, "w");
+
+	if (pf) {
+	    fprintf(pf, "%d\n", getpid());
+	    fclose(pf);
+	}
+	else {
+	    perror(pidfile);
+	    exit(1);
+	}
+    }
+
+    /* print out a nice little banner
+     */
+    time(&t);
+    printf("*** cwatch "VERSION" (pid:%d) started at %s", getpid(), ctime(&t));
+
     /* if it's running as a dflag, fork off a child and restart
      * it every time it dies.
      */
@@ -535,16 +552,6 @@ main(int argc, char **argv)
 	pid_t pid;
 	pid_t rc;
 
-	if (pidfile) {
-	    FILE *pf = fopen(pidfile, "w");
-
-	    if (pf) {
-		fprintf(pf, "%d\n", getpid());
-		fclose(pf);
-	    }
-	    else
-		perror(pidfile);
-	}
 	setsid();
 
 	/* if the parent gets a kill, kill all children and die */
