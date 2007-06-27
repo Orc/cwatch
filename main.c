@@ -77,6 +77,7 @@ int throttled = 0;		/* how many throttles are running? */
 time_t expiration;		/* when the next throttle expires */
 struct pattern *patterns;	/* for cleanup() */
 
+void expire(int sig);
 
 /* run() flags
  */
