@@ -104,11 +104,12 @@ will exit when it receives a
 or
 .B
 SIGALRM
-signal.   (This means that the
---restart-time option
-.RI ( not\ implemented )
-will not work with --daemon.)
-.tp
+signal.
+.\" (This means that the
+.\" --restart-time option
+.\" .RI ( not\ implemented )
+.\" will not work with --daemon.)
+.TP
 .BI \--pid-file \ file
 Write the process id of the supervisor process to
 .I file

@@ -93,7 +93,9 @@ struct x_option opts[] = {
     { 't', 't', "tail", "FILE", "examine lines of text as they are added\n"
 				"to FILE" },
     { '!',  0 , "pid-file", "FILE", "Write the process-id to FILE" },
+#if 0
     { 'r', 'r', "restart-time", "TIME", "Restart at TIME" },
+#endif
     { 'D',  0 , "dump-script", 0, "do a debugging dump of the config file" },
     { '?',  0 , "help", 0, "print usage information and exit." },
     { 'V', 'v', "version", 0, "print version information and exit." },
@@ -468,6 +470,7 @@ setalarm()
 	    if (q->throttle && (next == 0 || q->throttle < next))
 		next = q->throttle;
 
+	signal(SIGALRM, expire);
 	alarm( (next > now) ? (next-now) : 10);
     }
 } /* setalarm */
@@ -737,7 +740,6 @@ main(int argc, char **argv)
     signal(SIGTERM, cleanup);
     signal(SIGINT,  cleanup);
     signal(SIGHUP,  cleanup);
-    signal(SIGALRM, expire);
 
 
     if (cfgfile == 0) {
