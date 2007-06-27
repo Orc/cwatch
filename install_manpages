@@ -63,4 +63,4 @@ done
 
 test "$rc" && echo "error return ($rc) deferred"
 
-return ${rc:-0}
+exit ${rc:-0}

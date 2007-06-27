@@ -40,7 +40,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <sys/mman.h>
+#include <signal.h>
+#include <errno.h>
 
 #include "config.h"
 #include "cwatch.h"
@@ -53,14 +54,16 @@
 #endif
 
 
-int istail = 0;
-int ispipe = 0;
-int isfile = 0;
-int dumpit = 0;
+int tflag = 0;
+int pflag = 0;
+int fflag = 0;
+int Dflag = 0;
+int dflag = 0;
 char *eol = "\n";
 pcre *reol;
-char *input = "/var/log/syslog";
-char *config_file = 0;
+char *input = 0;
+char *cfgfile = 0;
+char *pidfile = 0;
 char *pgm;
 
 FILE *pipefd = 0;
@@ -80,8 +83,11 @@ struct x_option opts[] = {
 				"to FILE (/var/log/syslog)" },
     { 'p', 'p', "read-pipe", "COMMAND", "examine input piped in from COMMAND" },
     { 'f', 'f', "examine", "FILE", "do a single pass through FILE" },
-    { 'D',  0,  "dump-script", 0, "do a debugging dump of the config file" },
-    { '?',  0,  "help", 0, "print usage information and exit." },
+    { 'd', 'd',  "dflag", 0, "Run it as a daemon" },
+    { '!',  0 , "pid-file", "FILE", "Write the process-id to FILE" },
+    { 'r', 'r', "restart-time", "TIME", "Restart at TIME" },
+    { 'D',  0 , "dump-script", 0, "do a debugging dump of the config file" },
+    { '?',  0 , "help", 0, "print usage information and exit." },
     { 'V', 'v', "version", 0, "print version information and exit." },
 } ;
 #define NROPTS	(sizeof opts/sizeof opts[0])
@@ -100,12 +106,14 @@ getoptionsandscript(int argc, char **argv)
 
     while ( (opt = x_getopt(argc, argv, NROPTS, opts)) != EOF) {
 	switch (opt) {
-	case 'C':	config_file = x_optarg; break;
+	case 'C':	cfgfile = x_optarg; break;
 	case 'V':	fprintf(stderr, "cwatch %s\n", VERSION); exit(0);
-	case 't':	istail = 1; input = x_optarg; break;
-	case 'p':	ispipe = 1; input = x_optarg; break;
-	case 'f':	isfile = 1; input = x_optarg; break;
-	case 'D':	dumpit = 1; break;
+	case 't':	tflag = 1; input = x_optarg; break;
+	case 'p':	pflag = 1; input = x_optarg; break;
+	case 'f':	fflag = 1; input = x_optarg; break;
+	case 'd':	dflag = 1; break;
+	case 'D':	Dflag = 1; break;
+	case '!':	pidfile = x_optarg; break;
 	case 'F':	eol = x_optarg; break;
 	default:	fprintf(stderr, "usage: %s [options]\n", pgm);
 	case '?':	showopts(stderr, NROPTS, opts);
@@ -117,8 +125,8 @@ getoptionsandscript(int argc, char **argv)
 	exit(1);
     }
 
-    switch (istail + ispipe + isfile) {
-    case 0 :	istail = 1;
+    switch (tflag + pflag + fflag) {
+    case 0 :	tflag = 1;
     case 1 :	break;
     default:	fprintf(stderr, "%s: can only use one of -t, -p, -f\n", pgm);
 		fprintf(stderr, "usage: %s [options]\n", pgm);
@@ -436,6 +444,10 @@ dofile(struct pattern *p)
 } /* dofile */
 
 
+/*
+ * parser error catcher -- put here because we don't want to run if we
+ * have any errors.
+ */
 int errors = 0;
 
 yyerror(char *s)
@@ -444,7 +456,54 @@ yyerror(char *s)
 
     fprintf(stderr, "%s on line %d\n", s, line_number);
     errors++;
-}
+} /* yyerror */
+
+
+/*
+ * broadcast a death signal to everyone in our process group
+ */
+void
+alldie(int sig)
+{
+    fprintf(stderr, "alldie called\n");
+    signal(sig, SIG_IGN);
+    kill(0, sig);
+    exit(0);
+} /* alldie */
+
+/*
+ * broadcast a signal to everyone in our process group, but
+ * don't die.
+ */
+void
+restart(int sig)
+{
+    typedef void (*handler)(int);
+    handler hupsig = signal(SIGHUP, SIG_IGN);
+    handler termsig = signal(SIGTERM, SIG_IGN);
+
+    fprintf(stderr, "restart called\n");
+
+    kill(0, SIGHUP);
+    sleep(1);
+    kill(0, SIGTERM);
+
+    if (sig != SIGHUP) signal(SIGHUP, hupsig);
+    signal(SIGTERM, termsig);
+    signal(sig, restart);
+} /* restart */
+
+
+/*
+ * clean up and open pipes, then exit
+ */
+void
+cleanup(int sig)
+{
+    fprintf(stderr, "cleanup called\n");
+    if (pipefd) pclose(pipefd);
+    exit(0);
+} /* cleanup */
 
 
 float
@@ -468,52 +527,84 @@ main(int argc, char **argv)
     if (!isatty(fileno(stdout)))
 	setbuf(stdout, 0);
 
-#if 0
-    /* if it's running as a daemon, fork off a child and restart
-     * it every time it dies. (commented out for now because I'm
-     * not exactly sure how swatch does it.)
+    /* if it's running as a dflag, fork off a child and restart
+     * it every time it dies.
      */
-    while (daemon) {
+    while (dflag) {
 	int status;
 	pid_t pid;
 	pid_t rc;
 
+	if (pidfile) {
+	    FILE *pf = fopen(pidfile, "w");
+
+	    if (pf) {
+		fprintf(pf, "%d\n", getpid());
+		fclose(pf);
+	    }
+	    else
+		perror(pidfile);
+	}
+	setsid();
+
+	/* if the parent gets a kill, kill all children and die */
+	signal(SIGKILL, alldie);
+	signal(SIGTERM, alldie);
+
+	/* if the parent gets a hup, restart everything */
+	signal(SIGHUP, restart);
+	signal(SIGALRM, restart);
 	if ( (pid = fork()) < 0) {
 	    perror(pgm);
-	    sleep(1);
+	    if (errno == ECHILD)
+		sleep(5);
+	    else
+		exit(1);
 	}
-	else if (pid > 0)
+	else if (pid == 0)
 	    break;
 	else do {
 	    rc = wait(&status);
 	} while (rc != pid && kill(pid, 0) == 0);
     }
-#endif
+    /* when cwatch is running, any kill makes it die */
+    signal(SIGTERM, cleanup);
+    signal(SIGKILL, cleanup);
+    signal(SIGHUP,  cleanup);
 
-    if (config_file == 0) {
+    if (cfgfile == 0) {
 	char *home = getenv("HOME");
-	config_file = malloc( 2 + strlen("/.cwatchrc")
+	cfgfile = malloc( 2 + strlen("/.cwatchrc")
 				+ strlen( home ? home : "" ) );
-	sprintf(config_file, "%s/.cwatchrc", home ? home : "");
+	sprintf(cfgfile, "%s/.cwatchrc", home ? home : "");
 	/* if no config file is provided, attempt to open a default
 	 * file.  If that fails use a compiled-in default
 	 */
-	if (!openinput(config_file))
+	if (!openinput(cfgfile))
 	    defaultinput("watchfor /.*/ echo");
     }
-    else if ( !openinput(config_file) ) {
-	fprintf(stderr, "%s: no such file %s\n", pgm, config_file);
+    else if ( !openinput(cfgfile) ) {
+	fprintf(stderr, "%s: no such file %s\n", pgm, cfgfile);
 	exit(1);
     }
 
-    if ( (p = compile()) == 0 || errors) 
-	exit(1);
+    if (input == 0)
+	if (access(input = "/var/log/messages", R_OK) != 0)
+	    if (access(input = "/var/log/syslog", R_OK) != 0) {
+		fprintf(stderr, "%s: can't find a file to examine\n", pgm);
+		exit(0);
+	    }
 
-    if (dumpit)
+    if ( (p = compile()) == 0 || errors)  {
+	fprintf(stderr, "%s: all die.  Oh, the embarrassment!\n", pgm);
+	exit(1);
+    }
+
+    if (Dflag)
 	dump(p);
-    else if (istail)
+    else if (tflag)
 	dotail(p);
-    else if (ispipe)
+    else if (pflag)
 	dopipe(p);
     else
 	dofile(p);

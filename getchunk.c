@@ -57,8 +57,6 @@
 
 #include "config.h"
 
-#undef HAVE_MMAP
-
 #define MINBLK	128
 #define	MAXSTART	(MINBLK*80)
 

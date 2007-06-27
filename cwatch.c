@@ -68,7 +68,9 @@ statement(int what)
     cmd_rep = 0;
     cmds = 0;
 
-    //printf("statement %s /%s/\n", cmdname(what), p->rep);
+#if DEBUG
+    printf("statement %s /%s/\n", cmdname(what), p->rep);
+#endif
     if (pat == 0)
 	pat = p;
     else {
@@ -125,7 +127,9 @@ action(int order)
 	    break;
     }
 
-    //printf("action "); describe(p);
+#if DEBUG
+    printf("action "); describe(p);
+#endif
     if (cmds == 0)
 	cmds = p;
     else {
@@ -233,7 +237,9 @@ cmdline(char *command)
 static
 mask(unsigned *flags, char *name, unsigned first, unsigned last, unsigned max)
 {
-    //printf("mask(%d,\"%s\",%d,%d,%d)\n", *flags, name, first, last, max);
+#if DEBUG
+    printf("mask(%d,\"%s\",%d,%d,%d)\n", *flags, name, first, last, max);
+#endif
     if (first < 1 || first > max) {
 	fprintf(stderr, "bad %s %d\n", name, first);
 	return 0;

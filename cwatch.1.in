@@ -16,6 +16,9 @@ cwatch \- a simple log file watcher, written in C
 .RB [ \-v ]
 .RB [ \--help ]
 .RB [ \--dump-script ]
+.RB [ \--pid-file
+.IR file ]
+.RB [ \--daemon ]
 .SH DESCRIPTION
 .B cwatch
 monitors a system log for interesting information.   It attempts to
@@ -27,7 +30,7 @@ modules into your system.
 
 .SH OPTIONS
 .TP
-.BI \-c file
+.BI \-c \ file
 Use 
 .B file
 as the configuration file.  If you don't specify a configuration
@@ -44,7 +47,7 @@ watchfor /.*/
 .B \--help
 Displays usage information, then exits.
 .TP
-.BI \-F re
+.BI \-F \ re
 Log records are separated by 
 .I re
 instead of by newlines.
@@ -52,17 +55,17 @@ instead of by newlines.
 .B \-V
 Display the version information, then exit.
 .TP
-.BI \-t file
+.BI \-t \ file
 Examine lines of text as they are added to 
 .IR file .
 (This is the same as
 .IR "\-p cat\ file" )
 .TP
-.BI \-p command
+.BI \-p \ command
 Examine input piped from
 .IR command .
 .TP
-.BI \-f file
+.BI \-f \ file
 Do a single pass through
 .IR file ,
 doing everything except 
@@ -77,6 +80,28 @@ If
 .B cwatch
 is called without any input option, it defaults to
 .IR "\-t /var/log/syslog" .
+.TP
+.B \--daemon
+Run 
+.B cwatch
+as a daemon \-- cwatch starts a supervisor process that can restart
+the running process as needed, and hangups 
+.RI ( kill\ -HUP )
+send to that process cause cwatch to reread its configuration file
+and start scanning the logs again from scratch.
+.TP
+.BI \--pid-file \ file
+When 
+.B cwatch
+is running as a daemon (see the
+.I \--daemon
+option, above), write the process id of the supervisor process to
+.I file
+as a human-readable string suitable for passing as an argument to
+a program (like, oh,
+.I kill
+.B \-HUP
+.IR `cat\ file` )
 
 .SH THE CONFIGURATION FILE
 .B cwatch
