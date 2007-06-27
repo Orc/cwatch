@@ -197,29 +197,15 @@ address(char *mailto)
 }
 
 
-nextre(char *pat)
-{
-    char *whine;
-    int where;
-
-    tmp.c.throttle.nextrep = strdup(pat);
-    if ( (tmp.c.throttle.nextre = pcre_compile(pat, 0, &whine, &where, 0)) )
-	return 1;
-    
-    fprintf(stderr, "cwatch: %.*s[%s]: %s\n", where, pat, pat+where, whine);
-    return 0;
-}
-
-
 delay(int hr, int min, int sec)
 {
     tmp.c.throttle.delay = (hr * 3600) + (min * 60) + sec;
 }
 
 
-use(char *pat)
+use(int flag)
 {
-    tmp.c.throttle.use = strdup(pat);
+    tmp.c.throttle.use = flag;
 }
 
 

@@ -1,4 +1,4 @@
-#   @(#) configure.inc 1.17@(#)
+#   @(#) configure.inc 1.18@(#)
 #   Copyright (c) 1999 David Parsons. All rights reserved.
 #   
 #   Redistribution and use in source and binary forms, with or without
@@ -748,7 +748,7 @@ AC_OUTPUT () {
 	rm -f config.cmd
 	cat - > config.cmd << EOF
 #! /bin/sh
-${CC:+CC=\"$CC\"} ${CFLAGS:+CFLAGS=\"$CFLAGS\"} $ac_progname $ac_configure_command
+${CC:+CC="'"$CC"'"} ${CFLAGS:+CFLAGS="'"$CFLAGS"'"} $ac_progname $ac_configure_command
 EOF
 	chmod +x config.cmd
 

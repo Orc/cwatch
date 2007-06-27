@@ -27,7 +27,7 @@ clean:
 	rm -f *.o y.tab.h y.tab.c lex.yy.c
 	rm -f $(PROGS)
 
-spotless: clean
+distclean spotless: clean
 	rm -f Makefile config.* y.output cwatch.1 cwatch.h
 
 install: VERSION install.man install.bin

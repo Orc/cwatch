@@ -42,8 +42,8 @@
 
 union _cmd {
     struct { char *cmd; int keepopen; } exec ;
-    struct { char **addr; int nraddr; char *subject; char *mailcmd;} mail;
-    struct { int delay; pcre *nextre; char *nextrep; char *use; } throttle;
+    struct { char **addr; int nraddr; char *subject; char *mailcmd; } mail;
+    struct { int delay; int use; } throttle;
     struct { int attrib, fg, bg, count; } echo ;
 } ;
 

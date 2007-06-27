@@ -28,6 +28,21 @@ program as much as possible, but without having to drag masses of
 .I perl
 modules into your system.
 
+If
+.B cwatch
+catches a
+.B HUP
+or
+.B ALRM
+signal, it will attempt to re-read the configuration file and restart.
+When 
+.B cwatch
+catches a
+.BR TERM , QUIT
+or
+.B INT
+signal, it terminates as gracefully as it can.
+
 .SH OPTIONS
 .TP
 .BI \-c \ file
@@ -84,11 +99,11 @@ is called without any input option, it defaults to
 .B \--daemon
 Run 
 .B cwatch
-as a daemon \-- cwatch starts a supervisor process that can restart
-the running process as needed, and hangups 
-.RI ( kill\ -HUP )
-send to that process cause cwatch to reread its configuration file
-and start scanning the logs again from scratch.
+as a daemon \-- if a 
+.B SIGHUP
+or
+.B SIGALRM
+signal is received, it gracefully exits.
 .TP
 .BI \--pid-file \ file
 When 

@@ -184,8 +184,8 @@ timespec:	  NUMBER COLON NUMBER COLON NUMBER
 }
 ;
 
-throttleflag	: USE EQUAL WORD	{ use($3.v.text); }
-		| USE EQUAL REGEX	{ nextre($3.v.text); }
+throttleflag	: USE EQUAL "message"	{ use(1); }
+		| USE EQUAL "regex"	{ use(0); }
 		| when
 ;
 

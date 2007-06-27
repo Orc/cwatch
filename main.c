@@ -79,11 +79,11 @@ struct x_option opts[] = {
     { 'C', 'c', "config-file", "file", "the config file ($HOME/.cwatchrc)" },
     { 'F', 'F', "input-record-separator", "RE", "Use the given RE to delineate each\n"
 						"input record" },
-    { 't', 't', "tail", "FILE", "examine lines of text as they are added\n"
-				"to FILE (/var/log/syslog)" },
+    { 'd', 'd',  "daemon", 0, "Run it as a daemon" },
     { 'p', 'p', "read-pipe", "COMMAND", "examine input piped in from COMMAND" },
     { 'f', 'f', "examine", "FILE", "do a single pass through FILE" },
-    { 'd', 'd',  "dflag", 0, "Run it as a daemon" },
+    { 't', 't', "tail", "FILE", "examine lines of text as they are added\n"
+				"to FILE" },
     { '!',  0 , "pid-file", "FILE", "Write the process-id to FILE" },
     { 'r', 'r', "restart-time", "TIME", "Restart at TIME" },
     { 'D',  0 , "dump-script", 0, "do a debugging dump of the config file" },
@@ -541,13 +541,16 @@ main(int argc, char **argv)
 
     /* print out a nice little banner
      */
-    time(&t);
-    printf("*** cwatch "VERSION" (pid:%d) started at %s", getpid(), ctime(&t));
+    if (!Dflag) {
+	time(&t);
+	printf("*** cwatch "VERSION" (pid:%d) started at %s",
+		getpid(), ctime(&t));
+    }
 
-    /* if it's running as a dflag, fork off a child and restart
-     * it every time it dies.
+    /* if it's NOT running as a daemon, fork off a child and restart
+     * it if we get a HUP or ALRM.
      */
-    while (dflag) {
+    while ( (tflag || pflag) && !(dflag || Dflag) ) {
 	int status;
 	pid_t pid;
 	pid_t rc;
@@ -555,8 +558,9 @@ main(int argc, char **argv)
 	setsid();
 
 	/* if the parent gets a kill, kill all children and die */
-	signal(SIGKILL, alldie);
+	signal(SIGINT,  alldie);
 	signal(SIGTERM, alldie);
+	signal(SIGQUIT, alldie);
 
 	/* if the parent gets a hup, restart everything */
 	signal(SIGHUP, restart);
@@ -576,8 +580,10 @@ main(int argc, char **argv)
     }
     /* when cwatch is running, any kill makes it die */
     signal(SIGTERM, cleanup);
-    signal(SIGKILL, cleanup);
+    signal(SIGTERM, cleanup);
+    signal(SIGINT,  cleanup);
     signal(SIGHUP,  cleanup);
+    signal(SIGALRM, cleanup);
 
     if (cfgfile == 0) {
 	char *home = getenv("HOME");

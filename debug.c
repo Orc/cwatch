@@ -205,10 +205,8 @@ describe(struct command *c)
 			   (c->c.throttle.delay / 60) % 60,
 			    c->c.throttle.delay % 60);
 			ct=',';
-			if (c->c.throttle.use)
-			    printf(",use=\"%s\"", c->c.throttle.use);
-			if (c->c.throttle.nextre)
-			    printf(",use=/%s/", c->c.throttle.nextrep);
+			printf(",use=%s", c->c.throttle.use ? "regex"
+							    : "message");
 			break;
     }
     pwhen(ct,c);
