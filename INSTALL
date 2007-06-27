@@ -1,0 +1,22 @@
+			INSTALLING CWATCH
+			-----------------
+
+
+* Run "configure.sh".  If you want to put the files in any other directory
+  tree than /usr/local (i.e. /usr/local/bin, /usr/local/man) then call
+  it with the option --prefix=<directory-prefix>, for example:
+
+	./configure.sh --prefix=/usr
+
+  Configure.sh works something like Autoconf's configure scripts, and
+  has the following options:
+
+    --src=DIR		where the source lives (.)
+    --prefix=DIR	where to install the final product (/usr/local)
+    --execdir=DIR	where to put executables (prefix/bin)
+    --mandir=DIR	where to put manpages (prefix/man)
+    --confdir=DIR	where to put configuration information (/etc)
+
+* Run "make".
+
+* Run "make install".

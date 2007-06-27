@@ -1,0 +1,39 @@
+OBJS    = y.tab.o lex.yy.o cwatch.o main.o debug.o getchunk.o @XGETOPT@
+LDADD   = @LIBS@
+CC	= @CC@
+MANDIR  = @mandir@
+BINDIR  = @exedir@
+PROGS   = cwatch
+MANPAGES= cwatch.1
+
+all: $(PROGS)
+
+cwatch: $(OBJS)
+	$(CC) $(CFLAGS) -o cwatch $(OBJS) $(LDADD)
+
+lex.yy.c: scanner.l y.tab.h 
+	@LEX@ -l -i $(LEX_DEBUG) scanner.l
+
+y.tab.h y.tab.c: parser.y
+	@YACC@ $(YACC_DEBUG) -d parser.y
+
+$(OBJS): cwatch.h Makefile
+
+clean:
+	rm -f $(OBJS) $(LIB)
+	rm -f *.o y.tab.h y.tab.c lex.yy.c
+	rm -f $(PROGS)
+
+spotless: clean
+	rm -f Makefile config.* y.output cwatch.1 cwatch.h
+
+install: VERSION install.man install.bin
+
+install.bin: $(PROGS)
+	install -c -s $(PROGS) $(BINDIR)
+
+install.man: install_manpages
+	./install_manpages $(MANDIR) $(MANPAGES)
+
+install_manpages:
+	get install_manpages

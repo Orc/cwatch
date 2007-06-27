@@ -1,0 +1,66 @@
+#! /bin/sh
+#
+# install_manpages installs a bunch of manpages
+#
+
+if [ $# -le 1 ]; then
+    echo "usage: $0 destination [manpages]" 1>&2
+    exit 1
+fi
+DEST=$1
+shift
+
+test -f /Mastodon/VERSION && OSVER=`cat /Mastodon/VERSION`
+
+for manpage in $*; do
+    case X"$manpage" in
+    X*.[0-9])
+	    EXT=`echo "X$manpage" | sed -e 's/^.*\.\(.\)$/\1/'`
+	    ;;
+    X*.[0-9][a-zA-Z]*)
+	    EXT=`echo "X$manpage" | sed -e 's/^.*\.\(.\)[a-zA-Z]*$/\1/'`
+	    ;;
+    *)
+	    echo "$0: can't automatically figure out where to put $manpage"
+	    rc=1
+	    unset EXT
+	    ;;
+    esac
+    test -d $DEST/man$EXT || mkdir -p $DEST/man$EXT || exit 1
+
+    if [ -f ${manpage}.in ]; then
+	# need to preprocess this manpage during installation
+	#
+	sed -e 's/@VERSION@/'`cat VERSION`'/' \
+	    -e 's/@OS@/Mastodon/g' \
+	    -e 's/@OSVER@/'"${OSVER}/g" < ${manpage}.in > $$
+	install -m 444 $$ $DEST/man$EXT/$manpage
+	chown man.man $DEST/man$EXT/$manpage
+	rm -f $$
+    elif [ -f $manpage ]; then
+	# just copy it over
+	#
+	install -c -m 444 $manpage $DEST/man$EXT
+	chown man.man $DEST/man$EXT/$manpage
+    elif [ -h $manpage ]; then
+	# build a link to an existing manpage
+	#
+	LINK=`readlink $manpage`
+	if [ $? -eq 0 ]; then
+	    echo ".so $LINK" > $$
+	    install -m 444 $$ $DEST/man$EXT/$manpage
+	    chown man.man $DEST/man$EXT/$manpage
+	    rm -f $$
+	else
+	    rc=1
+	fi
+
+    else
+	echo "$0: can't find $manpage (source)"
+	rc=1
+    fi
+done
+
+test "$rc" && echo "error return ($rc) deferred"
+
+return ${rc:-0}
