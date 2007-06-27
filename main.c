@@ -300,9 +300,14 @@ static
 echoun(char *line, int size, struct command *q, FILE *out)
 {
     struct pattern *p = q->root;
-    time_t real_delay; /*= time(0);*/
+    int real_delay;
 
-    real_delay = p->when - (p->throttle - p->delay);
+#ifdef HAVE_DIFFTIME
+    real_delay = p->delay - difftime(p->throttle, p->when);
+#else
+    real_delay = p->delay - (p->throttle - p->when);
+#endif
+    if (real_delay < 0) real_delay = 0;
 
     fprintf(out, "** %d in %02d:%02d:%02d == ", 1 + p->count,
 	    real_delay / 3600,
@@ -510,6 +515,7 @@ match(struct pattern *p, char *line, int size, int interactive, time_t now)
 		free(m);
 
 		if (ok) {
+		    p->when = now;
 		    p->count++;
 		    return 1;
 		}
@@ -694,6 +700,7 @@ alldie(int sig)
     exit(0);
 } /* alldie */
 
+
 /*
  * broadcast a signal to everyone in our process group, but
  * don't die.
@@ -702,15 +709,15 @@ void
 restart(int sig)
 {
     typedef void (*handler)(int);
-    handler termsig;
 
     signal(sig, SIG_IGN);
+    signal(SIGINT, SIG_IGN);
 
-    termsig = signal(SIGTERM, SIG_IGN);
-    kill(0, SIGTERM);
-    signal(SIGTERM, termsig);
+    kill(0, SIGINT);
+    sleep(1);
 
     signal(sig, restart);
+    signal(SIGINT, alldie);
 } /* restart */
 
 
@@ -759,6 +766,7 @@ main(int argc, char **argv)
 {
     time_t t;
     int isadaemon = 0;
+    int i;
 
 #ifdef HAVE_BASENAME
     pgm = basename(argv[0]);
@@ -811,6 +819,10 @@ main(int argc, char **argv)
 
 	setsid();
 
+	/* Ignore the signals we aren't interested in */
+	for (i=0; i < NSIG; i++)
+	    signal(i, SIG_IGN);
+
 	/* if the parent gets a kill, kill all children and die */
 	signal(SIGINT,  alldie);
 	signal(SIGTERM, alldie);
@@ -841,12 +853,16 @@ main(int argc, char **argv)
 	printf("*** cwatch "VERSION" (pid:%d) restarted at %s",
 		getpid(), ctime(&t));
     }
-    /* when cwatch is running, any kill makes it die */
-    signal(SIGTERM, cleanup);
-    signal(SIGTERM, cleanup);
-    signal(SIGINT,  cleanup);
-    signal(SIGHUP,  cleanup);
 
+    /* default the signals we aren't interested in */
+    for (i=0; i < NSIG; i++)
+	signal(i, SIG_DFL);
+
+    /* when cwatch is running, any kill makes it die */
+    signal(SIGINT,  cleanup);
+    signal(SIGQUIT, cleanup);
+    signal(SIGTERM, cleanup);
+    signal(SIGHUP,  isadaemon ? SIG_IGN : cleanup);
 
     if (cfgfile == 0) {
 	char *home = getenv("HOME");

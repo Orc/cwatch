@@ -59,7 +59,7 @@
 
 #include "config.h"
 
-#define MINBLK	128
+#define MINBLK	32
 #define	MAXSTART	(MINBLK*80)
 
 typedef struct {
