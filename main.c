@@ -465,7 +465,7 @@ main(int argc, char **argv)
 
     /* don't buffer output when it's going to a file
      */
-    if (!isatty(fileno(stdout))
+    if (!isatty(fileno(stdout)))
 	setbuf(stdout, 0);
 
 #if 0
