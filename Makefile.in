@@ -19,6 +19,9 @@ y.tab.h y.tab.c: parser.y
 
 $(OBJS): cwatch.h Makefile
 
+@XGETOPT@ fake: basis/options.c
+	$(CC) -c -o @XGETOPT@ $<
+
 clean:
 	rm -f $(OBJS) $(LIB)
 	rm -f *.o y.tab.h y.tab.c lex.yy.c

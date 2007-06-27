@@ -427,7 +427,7 @@ dofile(struct pattern *p)
 
     if (strcmp(input, "-") == 0)
 	file = stdin;
-    else if ( (file = fopen(input, "r")) < 0) {
+    else if ( (file = fopen(input, "r")) == 0) {
 	fprintf(stderr, "%s: cannot open %s\n", pgm, input);
 	exit(1);
     }
@@ -462,6 +462,11 @@ main(int argc, char **argv)
 #endif
 
     getoptionsandscript(argc, argv);
+
+    /* don't buffer output when it's going to a file
+     */
+    if (!isatty(fileno(stdout))
+	setbuf(stdout, 0);
 
 #if 0
     /* if it's running as a daemon, fork off a child and restart

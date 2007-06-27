@@ -85,7 +85,7 @@ x_getopt(int argc, char **argv, int optcount, struct x_option *opts)
 			    fprintf(stderr,
 				    "%s: option `-%c' requires an argument\n",
 				    x_argv[0], flag);
-			return EOF;
+			return 0;
 		    }
 		}
 		return opts[x].optval;
@@ -128,7 +128,7 @@ x_getopt(int argc, char **argv, int optcount, struct x_option *opts)
 			fprintf(stderr,
 				"%s: option `--%s' requires an argument\n",
 				x_argv[0], longopts);
-		    return EOF;
+		    return 0;
 		}
 	    }
 	    return opts[x].optval;
