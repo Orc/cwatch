@@ -62,6 +62,10 @@ int pflag = 0;
 int fflag = 0;
 int Dflag = 0;
 int dflag = 0;
+
+int rflag = 0;	/* -r with absolute time */
+int rplus = 0;	/* -r with delta time */
+
 char *eol = "\n";
 pcre *reol;
 char *input = 0;
@@ -94,9 +98,7 @@ struct x_option opts[] = {
     { 't', 't', "tail", "FILE", "examine lines of text as they are added\n"
 				"to FILE" },
     { '!',  0 , "pid-file", "FILE", "Write the process-id to FILE" },
-#if 0
     { 'r', 'r', "restart-time", "TIME", "Restart at TIME" },
-#endif
     { 'D',  0 , "dump-script", 0, "do a debugging dump of the config file" },
     { '?',  0 , "help", 0, "print usage information and exit." },
     { 'V', 'v', "version", 0, "print version information and exit." },
@@ -112,6 +114,44 @@ usage(int rc)
     showopts(stderr, NROPTS, opts);
     exit(rc);
 }
+
+/*
+ * getrestarttime() parses a -r option and sets the appropriate combination
+ * of the rplus value and the rflag.
+ */
+void
+getrestarttime(char *opt)
+{
+    char *arg = opt;
+    int ct;
+    char apm[3];
+    unsigned int hr, mn, ispm=0;
+
+    if (*opt == '+')
+	++opt;
+    else
+	rflag = 1;
+
+    ct = sscanf(opt, "%u:%u%2s", &hr, &mn, apm);
+
+    if (hr >= ((ct == 3) ? 12 : 24) || (mn > 59) ) {
+no:	fprintf(stderr, "%s: garbled time for -r%s\n", pgm, arg);
+	fprintf(stderr, "ct=%d, hr=%d, mn=%d, apm=[%s]\n", ct, hr, mn, apm);
+        exit(1);
+    }
+
+    if (ct == 3) {
+	ispm = !strcasecmp(apm, "pm");
+	if (! (ispm || strcasecmp(apm, "am") == 0))
+	    goto no;
+	if (ispm && !rplus)
+	    hr += 12;
+    }
+
+    /* the rplus time is the hour+minute encoded as minutes */
+    rplus = mn + (hr*60);
+} /* getrestarttime */
+
 
 void
 getoptionsandscript(int argc, char **argv)
@@ -133,6 +173,7 @@ getoptionsandscript(int argc, char **argv)
 	case 'D':	Dflag = 1; break;
 	case '!':	pidfile = x_optarg; break;
 	case 'F':	eol = x_optarg; break;
+	case 'r':	getrestarttime(x_optarg); break;
 	default:	usage( !(opt=='?') );
 	}
     }
@@ -272,6 +313,7 @@ echoun(char *line, int size, struct command *q, FILE *out)
 	fprintf(out, "/%s/\n", p->rep);
     else
 	fprintf(out, "%s\n", p->trigger->c.throttle.msg);
+    fflush(out);
 } /* echoun */
 
 
@@ -283,6 +325,7 @@ echoit(char *line, int size, struct command *q, FILE *out)
 {
     fwrite(line, size, 1, out);
     fputc('\n', out);
+    fflush(out);
 } /* echoit */
 
 
@@ -323,6 +366,30 @@ mailto(char *s, int size, struct command *q, int ac, int av[], echofn echo)
 
 
 /*
+ * writeto() write(1)'s people
+ */
+static
+writeto(char *s, int size, struct command *q, int ac, int av[], echofn echo)
+{
+    char **recipients = q->c.mail.addr;
+    int  nrrecipients = q->c.mail.nraddr;
+    char bfr[17+1+80];	/* sizeof("write 2>/dev/null") + sizeof(" ")
+			   + 79 characters name + sizeof("\0") */
+    FILE *f;
+    int idx;
+
+    for (idx=0; idx < nrrecipients; idx++) {
+	sprintf(bfr, "write 2>/dev/null %.79s", recipients[idx]);
+
+	if ( (f = popen(bfr, "w")) != 0) {
+	    (*echo)(s, size, q, f);
+	    pclose(f);
+	}
+    }
+} /* writeto */
+
+
+/*
  * run() commands associated with a pattern
  */
 static int
@@ -341,13 +408,15 @@ run(struct pattern *p, char *s, int size, int flags,
 
 	q->root = p;
 	if (flags & THROTTLED) {
-	    if (p->count) {
-		switch (q->what) {
-		case MAIL:  mailto(s, size, q, ac, av, echoun);
-			    break;
-		case ECHO:  echoun(s, size, q, stdout);
-			    break;
-		}
+	    if (p->count == 0) continue;
+
+	    switch (q->what) {
+	    case WRITE: writeto(s, size, q, ac, av, echoun);
+			break;
+	    case MAIL:  mailto(s, size, q, ac, av, echoun);
+			break;
+	    case ECHO:  echoun(s, size, q, stdout);
+			break;
 	    }
 	}
 	else {
@@ -366,7 +435,8 @@ run(struct pattern *p, char *s, int size, int flags,
 				 */
 	    case ECHO:	echoit(s, size, q, stdout);
 			break;
-	    case WRITE:	break;
+	    case WRITE:	writeto(s, size, q, ac, av, echoit);
+			break;
 	    case MAIL:	mailto(s, size, q, ac, av, echoit);
 			break;
 	    case THROTTLE:
@@ -475,6 +545,38 @@ setalarm()
 	alarm( (next > now) ? (next-now) : 10);
     }
 } /* setalarm */
+
+
+/*
+ * restart_alarm() sets the restart alarm, if it's set
+ */
+void
+restart_alarm()
+{
+    if (rplus)
+	if (rflag) {
+	    /* at absolute time ... */
+	    time_t now = time(0);
+	    int hr, min;
+	    int delay;
+	    struct tm *t;
+
+	    t = localtime(&now);
+	    hr = rplus / 60;
+	    min = rplus % 60;
+
+	    /* hours delay */
+	    delay =  60 * ((t->tm_hour - hr) + (hr < t->tm_hour) ? 24 : 0);
+	    /* plus minutes delay */
+	    delay += (t->tm_min - min) + (min < t->tm_min) ? 60 : 0;
+
+	    alarm(60*delay);
+	}
+	else {
+	    /* .. or after some interval */
+	    alarm(60*rplus);
+	}
+} /* restart_alarm */
 
 
 /*
@@ -600,15 +702,14 @@ void
 restart(int sig)
 {
     typedef void (*handler)(int);
-    handler hupsig = signal(SIGHUP, SIG_IGN);
-    handler termsig = signal(SIGTERM, SIG_IGN);
+    handler termsig;
 
-    kill(0, SIGHUP);
-    sleep(1);
+    signal(sig, SIG_IGN);
+
+    termsig = signal(SIGTERM, SIG_IGN);
     kill(0, SIGTERM);
-
-    if (sig != SIGHUP) signal(SIGHUP, hupsig);
     signal(SIGTERM, termsig);
+
     signal(sig, restart);
 } /* restart */
 
@@ -718,6 +819,7 @@ main(int argc, char **argv)
 	/* if the parent gets a hup, restart everything */
 	signal(SIGHUP, restart);
 	signal(SIGALRM, restart);
+
 	if ( (pid = fork()) < 0) {
 	    perror(pgm);
 	    if (errno == ECHILD)
@@ -727,9 +829,12 @@ main(int argc, char **argv)
 	}
 	else if (pid == 0) 
 	    break;
-	else do {
-	    rc = wait(&status);
-	} while (rc != pid && kill(pid, 0) == 0);
+	else {
+	    restart_alarm();
+	    do {
+		rc = wait(&status);
+	    } while (rc != pid && kill(pid, 0) == 0);
+	}
 	if (WEXITSTATUS(status) == 99)
 	    exit(1);
 	time(&t);

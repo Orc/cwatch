@@ -13,6 +13,8 @@ cwatch \- a simple log file watcher, written in C
 .IR command ]
 .RB [ \-f
 .IR file ]
+.RB [ \-r
+.IR restart-time ]
 .RB [ \-v ]
 .RB [ \--help ]
 .RB [ \--dump-script ]
@@ -82,10 +84,25 @@ Examine input piped from
 .TP
 .BI \-f \ file
 Do a single pass through
-.IR file ,
-doing everything except 
-.B throttle
-actions.
+.IR file .
+.TP
+.BI \-r \ restart-time
+Restart
+.B cwatch
+at the given time.   The 
+.I restart-time
+may be given as an absolute time in the form
+.IR HH : MM [ am|pm ],
+which means that
+.B cwatch
+will restart every day at the specified time,
+or it may be a delay in the form
+.IR HH : MM ,
+which means that 
+.B cwatch
+will restart every
+.IR HH : MM 
+after you start it.
 .TP
 .B \--dump-script
 For debugging only.  Display the (parsed) contents of the configuration
@@ -105,10 +122,9 @@ or
 .B
 SIGALRM
 signal.
-.\" (This means that the
-.\" --restart-time option
-.\" .RI ( not\ implemented )
-.\" will not work with --daemon.)
+(This means that the 
+.B \-r
+option will not work with \--daemon.)
 .TP
 .BI \--pid-file \ file
 Write the process id of the supervisor process to
@@ -271,18 +287,6 @@ command only runs at teatime on weekdays.
 The 
 .B echo
 modes are not yet implemented.
-
-.B write
-is not yet implemented.
-
-During
-.BR throttle ,
-no commands are evaluated, 
-.I including
-.BR continue .
-This is a brand new bug introduced as a result of making 
-.B throttle
-actually work.
 
 .SH AUTHOR
 David Parsons <orc@pell.chi.il.us>
