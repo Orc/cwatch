@@ -34,10 +34,13 @@
  */
 #include <stdio.h>
 #include <string.h>
-#include <malloc.h>
+#if HAVE_MALLOC_H
+#   include <malloc.h>
+#endif
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h>
@@ -68,6 +71,9 @@ char *pgm;
 
 FILE *pipefd = 0;
 struct command *pipecmd;
+
+struct pattern *gthrottle = 0;	/* current use=regex throttle */
+struct pattern *patterns;	/* for cleanup() */
 
 
 /* run() flags
@@ -154,22 +160,28 @@ expand(char *src, int ssiz, char *cmd, int argc, int argv[])
     dest = malloc(size);
 
     for (p = cmd; *p; ++p) {
-	if ( (*p == '$') && (isdigit(p[1]) || p[1] == '*')) {
+	if ( (*p == '$') && (isdigit(p[1]) || p[1] == '*' || p[1] == '@')) {
 	    ++p;
 	    switch (*p) {
 	    case '*':
-	    case '0':   arg = 0;
+	    case '0':   arg = -1;
+			cpy = 0;
 			add = ssiz;
 			break;
+	    case '@':   arg = 0;
+			cpy = argv[0];
+			add = argv[1]-cpy;
+			break;
 	    default:	arg = 2 * ((*p)-'0');
-			add = argv[arg+1]-argv[arg];
+			cpy = argv[arg];
+			add = argv[arg+1]-cpy;
 			break;
 	    }
 	    if (di + add >= size-2) {
 		size += add;
 		dest = realloc(dest, size *= 2);
 	    }
-	    for (cpy=arg ? argv[arg] : 0; add > 0; --add)
+	    for (; add > 0; --add)
 		dest[di++] = src[cpy++];
 	}
 	else {
@@ -232,18 +244,38 @@ pipeline(char *src, int size, struct command *cmd, int argc, int argv[])
 } /* pipeline */
 
 
+typedef (*echofn)(char*,int,struct command *, FILE*);
+
+/*
+ * echoun() spits out a throttle message for a throttle that's just
+ *          expired.
+ */
+static
+echoun(char *line, int size, struct command *q, FILE *out)
+{
+    struct pattern *p = q->root;
+    time_t real_delay = time(0);
+
+    real_delay -= (p->throttle - p->delay);
+
+    fprintf(out, "** %d in %02d:%02d:%02d == ", p->count,
+	    real_delay / 3600,
+	   (real_delay / 60) % 60,
+	    real_delay % 60);
+
+    if (p->trigger->c.throttle.use == REGEX)
+	fprintf(out, "/%s/\n", p->rep);
+    else
+	fprintf(out, "%s\n", p->trigger->c.throttle.msg);
+} /* echoun */
+
+
 /*
  * echoit() echo a matched line, putting appropriate throttle prefixes in.
  */
 static
 echoit(char *line, int size, struct command *q, FILE *out)
 {
-    if (q->root->count)
-	fprintf(out, "** %d in %d:%d:%d == ", q->root->count,
-		q->root->delay / 3600,
-	       (q->root->delay / 60) % 60,
-		q->root->delay % 60);
-
     fwrite(line, size, 1, out);
     fputc('\n', out);
 } /* echoit */
@@ -266,7 +298,7 @@ notnow(struct command *q, struct tm *now)
  * mailto() sends mail to people
  */
 static
-mailto(char *s, int size, struct command *q, int ac, int av[])
+mailto(char *s, int size, struct command *q, int ac, int av[], echofn echo)
 {
     FILE *f;
 
@@ -278,7 +310,7 @@ mailto(char *s, int size, struct command *q, int ac, int av[])
 	    free(val);
 	}
 	fprintf(f, "\n----\n");
-	echoit(s, size, q, f);
+	(*echo)(s, size, q, f);
 	fprintf(f, "----\n      --Cwatch\n");
 	pclose(f);
     }
@@ -302,8 +334,18 @@ run(struct pattern *p, char *s, int size, int flags,
 
 	if (q->what == CONTINUE) keepon = 1;
 
-	if ((flags & THROTTLED) == 0) {
-	    q->root = p;
+	q->root = p;
+	if (flags & THROTTLED) {
+	    if (p->count) {
+		switch (q->what) {
+		case MAIL:  mailto(s, size, q, ac, av, echoun);
+			    break;
+		case ECHO:  echoun(s, size, q, stdout);
+			    break;
+		}
+	    }
+	}
+	else {
 	    switch (q->what) {
 	    case EXEC:	command(s, size, q, ac, av);
 			break;
@@ -320,13 +362,19 @@ run(struct pattern *p, char *s, int size, int flags,
 	    case ECHO:	echoit(s, size, q, stdout);
 			break;
 	    case WRITE:	break;
-	    case MAIL:	mailto(s, size, q, ac, av);
+	    case MAIL:	mailto(s, size, q, ac, av, echoit);
 			break;
 	    case THROTTLE:
-			if (flags & INTERACTIVE) {
-			    p->delay = q->c.throttle.delay;
-			    p->throttle = time(0) + p->delay;
-			    p->count = 0;
+			p->delay = q->c.throttle.delay;
+			p->throttle = time(0) + p->delay;
+			p->trigger = q;
+			p->count = 0;
+			if (q->c.throttle.use == REGEX)
+			    gthrottle = p;
+			else {
+			    if (q->c.throttle.msg)
+				free(q->c.throttle.msg);
+			    q->c.throttle.msg = expand(s,size,"$@",ac,av);
 			}
 			break;
 	    case QUIT:	die = 1;
@@ -335,9 +383,23 @@ run(struct pattern *p, char *s, int size, int flags,
 	}
     }
     if (die) exit(0);
-    if ( (flags & THROTTLED) == 0) p->count = 0;
     return !keepon;
 }
+
+
+/*
+ * unthrottle() spits out whatever commands are needed after 
+ * throttle expires
+ */
+void
+unthrottle(struct pattern *p, time_t now)
+{
+    run(p, 0, 0, THROTTLED, localtime(&now), 0, 0);
+    p->count = 0;
+    p->throttle = 0;
+    p->delay = 0;
+    p->trigger = 0;
+} /* unthrottle */
 
 
 /*
@@ -352,13 +414,28 @@ match(struct pattern *p, char *line, int size, int interactive, time_t now)
     int flags = interactive ? INTERACTIVE : 0;
     
     if (argc >= 0) {
+	if (gthrottle && (gthrottle != p)) {
+	    unthrottle(gthrottle, now);
+	    gthrottle = 0;
+	}
+
 	if (p->what == IGNORE)
 	    return 1;
 	else {
-	    if (interactive && (p->throttle > now)) {
-		p->count++;
-		flags |= THROTTLED;
+	    if (p->throttle > now) {
+		int ok;
+		char *m = expand(line, size, "$@", argc, argv);
+
+		ok = p->trigger->c.throttle.msg && !strcmp(p->trigger->c.throttle.msg, m);
+		free(m);
+
+		if (ok) {
+		    p->count++;
+		    return 1;
+		}
 	    }
+	    if (p->count || (p->throttle > now))
+		unthrottle(p, now);
 	    return run(p, line, size, flags, localtime(&now), argc, argv);
 	}
     }
@@ -495,11 +572,18 @@ restart(int sig)
 
 
 /*
- * clean up and open pipes, then exit
+ * clean up and close pipes, then exit
  */
 void
 cleanup(int sig)
 {
+    struct pattern *p;
+    time_t now = time(0);
+
+    for (p=patterns; p; p = p->next)
+	if (p->count || (p->throttle > now))
+	    unthrottle(p, now);
+
     if (pipefd) pclose(pipefd);
     exit(0);
 } /* cleanup */
@@ -508,7 +592,6 @@ cleanup(int sig)
 float
 main(int argc, char **argv)
 {
-    struct pattern *p;
     time_t t;
     int isadaemon = 0;
 
@@ -578,11 +661,15 @@ main(int argc, char **argv)
 	    else
 		exit(1);
 	}
-	else if (pid == 0)
+	else if (pid == 0) {
+	    argv[0] = "B1FF!";
 	    break;
+	}
 	else do {
 	    rc = wait(&status);
 	} while (rc != pid && kill(pid, 0) == 0);
+	if (WEXITSTATUS(status) == 99)
+	    exit(1);
 	time(&t);
 	printf("*** cwatch "VERSION" (pid:%d) restarted at %s",
 		getpid(), ctime(&t));
@@ -593,6 +680,7 @@ main(int argc, char **argv)
     signal(SIGINT,  cleanup);
     signal(SIGHUP,  cleanup);
     signal(SIGALRM, cleanup);
+
 
     if (cfgfile == 0) {
 	char *home = getenv("HOME");
@@ -607,26 +695,26 @@ main(int argc, char **argv)
     }
     else if ( !openinput(cfgfile) ) {
 	fprintf(stderr, "%s: no such file %s\n", pgm, cfgfile);
-	exit(1);
+	exit(99);
     }
 
     if (input == 0)
 	if (access(input = "/var/log/messages", R_OK) != 0)
 	    if (access(input = "/var/log/syslog", R_OK) != 0) {
 		fprintf(stderr, "%s: can't find a file to examine\n", pgm);
-		exit(0);
+		exit(99);
 	    }
 
-    if ( (p = compile()) == 0 || errors) 
-	exit(1);
+    if ( (patterns = compile()) == 0 || errors) 
+	exit(99);
 
     if (Dflag)
-	dump(p);
+	dump(patterns);
     else if (tflag)
-	dotail(p);
+	dotail(patterns);
     else if (pflag)
-	dopipe(p);
+	dopipe(patterns);
     else
-	dofile(p);
-    exit(0);
-}
+	dofile(patterns);
+    cleanup(0);
+} /* main */

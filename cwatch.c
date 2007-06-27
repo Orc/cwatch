@@ -33,7 +33,9 @@
  *  THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <stdio.h>
-#include <malloc.h>
+#if HAVE_MALLOC_H
+#   include <malloc.h>
+#endif
 #include <string.h>
 #include <pwd.h>
 #include <sys/types.h>
@@ -124,6 +126,10 @@ action(int order)
     switch (order) {
     case MAIL:
 	    p->c.mail.mailcmd = mailcmd(MAILPROG, p);
+	    break;
+    case THROTTLE:
+	    if (p->c.throttle.use == 0)
+		p->c.throttle.use = MESSAGE;
 	    break;
     }
 

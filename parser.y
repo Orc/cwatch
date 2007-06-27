@@ -37,7 +37,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <malloc.h>
+#if HAVE_MALLOC_H
+#   include <malloc.h>
+#endif
 
 %}
 
@@ -81,6 +83,8 @@
 %token	BELL
 %token	THROTTLE
 %token	USE
+%token	MESSAGE
+%token	REGEX
 %token	QUIT
 %token	CONTINUE
 %token	WHEN
@@ -184,16 +188,17 @@ timespec:	  NUMBER COLON NUMBER COLON NUMBER
 }
 ;
 
-throttleflag	: USE EQUAL "message"	{ use(1); }
-		| USE EQUAL "regex"	{ use(0); }
+throttleflag	: USE EQUAL MESSAGE	{ use(MESSAGE); }
+		| USE EQUAL REGEX	{ use(REGEX); }
 		| when
 ;
 
-throttleargs:	  /* empty */
+throttleargs:	  throttleflag
 		| throttleargs COMMA throttleflag
 ;
 
-throttle:	  THROTTLE timespec throttleargs
+throttle:	  THROTTLE timespec
+		| THROTTLE timespec throttleargs
 ;
 
 mailflags:	  ADDRESSES EQUAL address

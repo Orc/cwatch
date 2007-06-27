@@ -206,7 +206,7 @@ or
 .I $*
 will be replaced by the entire line.
 .TP
-.B mail\ [addresses=to:to:...][,subject=\"text\"]
+.B mail\ [addresses=to:to:...][,subject=\fItext\fB]
 Send mail to
 .I address(es)
 containing the matched lines as they appear.  If you don't give addresses
@@ -231,6 +231,16 @@ on it.  Once a command is
 nothing except 
 .B continue
 takes effect until after the delay given.
+The 
+.B use=
+option is either
+.IR regex ,
+which means that the throttling continues until
+some other waitfor pattern is matched, or 
+.IR message ,
+which means that the throttling continues until
+the pattern matches a string that's different from
+the one it originally matched.
 .TP
 .B continue
 Causes
@@ -261,15 +271,17 @@ The
 .B echo
 modes are not yet implemented.
 
-The 
-.I use=
-option for 
-.B throttle
-doesn't work, because I can't make heads or tails out of what it's
-supposed to do.
-
 .B write
 is not yet implemented.
+
+During
+.BR throttle ,
+no commands are evaluated, 
+.I including
+.BR continue .
+This is a brand new bug introduced as a result of making 
+.B throttle
+actually work.
 
 .SH AUTHOR
 David Parsons <orc@pell.chi.il.us>

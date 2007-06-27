@@ -1,4 +1,4 @@
-#   @(#) configure.inc 1.19@(#)
+#   @(#) configure.inc 1.21@(#)
 #   Copyright (c) 1999 David Parsons. All rights reserved.
 #   
 #   Redistribution and use in source and binary forms, with or without
@@ -458,7 +458,8 @@ MF_PATH_INCLUDE () {
 # and fd 5 points to what used to be fd 1
 #
 AC_INIT () {
-    rm -f config.sub config.h config.mak
+    __config_files="config.cmd config.sub config.h config.mak config.log"
+    rm -f $__config_files
     __cwd=`pwd`
     exec 5>&1 1>$__cwd/config.log 2>&1
     AC_CONFIGURE_FOR=__AC_`echo $1 | sed -e 's/\..$//' | tr 'a-z' 'A-Z' | tr ' ' '_'`_D
@@ -482,7 +483,6 @@ AC_INIT () {
     rm -f $$
 
     LOG "Configuring for [$1]"
-    ac_os=`uname -s`
 
     cat > $__cwd/config.h << EOF
 /*
@@ -494,7 +494,6 @@ AC_INIT () {
 
 
 EOF
-    rm -f $__cwd/config.mak
 
     AC_PREFIX=${AC_PREFIX:-/usr/local}
     AC_EXECDIR=${AC_EXECDIR:-$AC_PREFIX/bin}
@@ -513,6 +512,12 @@ EOF
     AC_PATH=${WITH_PATH:-$PATH}
     AC_PROG_CPP
     AC_PROG_INSTALL
+
+    ac_os=`uname -s`
+    _os=`echo $ac_os | tr '[a-z]' '[A-Z]'`
+    AC_DEFINE OS_$_os	1
+    eval OS_${_os}=1
+    unset _os
 }
 
 
@@ -738,6 +743,9 @@ EOF
 AC_OUTPUT () {
     cd $__cwd
     AC_SUB 'LIBS' "$AC_LIBS"
+    AC_SUB 'CONFIGURE_FILES' "$__config_files"
+    AC_SUB 'GENERATED_FILES' "$*"
+
     if [ -r config.sub ]; then
 	test "$AC_SED_PROG" || AC_PROG_SED
 	test "$AC_SED_PROG" || return 1
@@ -757,6 +765,7 @@ EOF
 	    if test -r ${makefile}.in; then
 		LOG "generating $makefile"
 		$AC_SED_PROG -f config.sub < ${makefile}.in > $makefile
+		__generated_files="$__generated_files $makefile"
 	    else
 		LOG "WARNING: ${makefile}.in does not exist!"
 	    fi

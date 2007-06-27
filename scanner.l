@@ -79,6 +79,8 @@ when			{ return WHEN; }
 mail			{ return MAIL; }
 addresses		{ return ADDRESSES; }
 subject			{ return SUBJECT; }
+message			{ return MESSAGE; }
+regex			{ return REGEX; }
 	
 #[^\n]*			;
 \n			{ line_number++; }

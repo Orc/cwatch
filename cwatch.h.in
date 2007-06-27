@@ -43,7 +43,7 @@
 union _cmd {
     struct { char *cmd; int keepopen; } exec ;
     struct { char **addr; int nraddr; char *subject; char *mailcmd; } mail;
-    struct { int delay; int use; } throttle;
+    struct { int delay; int use; char *msg;} throttle;
     struct { int attrib, fg, bg, count; } echo ;
 } ;
 
@@ -60,11 +60,14 @@ struct pattern {
     char *rep;			/* human-readable version of it */
     pcre_extra *study;		/* extra configuration for pcre_exec() */
     int what;			/* watch or ignore it */
+
+    struct pattern *next;	/* next pattern */
+    struct command *cmd;	/* list of commands to do */
+
     time_t throttle;		/* throttle until this time */
     int delay;			/* the throttle delay (for echo,write,mail) */
     int count;			/* detections during a throttle */
-    struct pattern *next;	/* next pattern */
-    struct command *cmd;	/* list of commands to do */
+    struct command *trigger;	/* the actual throttle command */
 } ;
 
 

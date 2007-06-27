@@ -49,7 +49,9 @@
  */
 
 #include <stdio.h>
-#include <malloc.h>
+#if HAVE_MALLOC_H
+#   include <malloc.h>
+#endif
 #include <pcre.h>
 #include <sys/stat.h>
 #include <unistd.h>

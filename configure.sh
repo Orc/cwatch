@@ -57,7 +57,7 @@ else
     AC_SUB XGETOPT options.o
 fi
 
-AC_CHECK_HEADERS malloc.h || AC_CHECK_HEADERS sys/malloc.h
+test "$OS_FREEBSD" || AC_CHECK_HEADERS malloc.h || AC_CHECK_HEADERS sys/malloc.h
 
 save_AC_PATH=$AC_PATH
 AC_PATH=/usr/lib:/usr/sbin:/usr/bin:/bin:/sbin MF_PATH_INCLUDE MAIL sendmail smail mail Mail
