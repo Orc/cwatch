@@ -65,6 +65,7 @@ struct pattern {
     struct command *cmd;	/* list of commands to do */
 
     time_t throttle;		/* throttle until this time */
+    time_t when;		/* last time this pattern was matched */
     int delay;			/* the throttle delay (for echo,write,mail) */
     int count;			/* detections during a throttle */
     struct command *trigger;	/* the actual throttle command */

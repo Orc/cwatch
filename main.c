@@ -300,11 +300,11 @@ static
 echoun(char *line, int size, struct command *q, FILE *out)
 {
     struct pattern *p = q->root;
-    time_t real_delay = time(0);
+    time_t real_delay; /*= time(0);*/
 
-    real_delay -= (p->throttle - p->delay);
+    real_delay = p->when - (p->throttle - p->delay);
 
-    fprintf(out, "** %d in %02d:%02d:%02d == ", p->count,
+    fprintf(out, "** %d in %02d:%02d:%02d == ", 1 + p->count,
 	    real_delay / 3600,
 	   (real_delay / 60) % 60,
 	    real_delay % 60);
@@ -497,7 +497,6 @@ match(struct pattern *p, char *line, int size, int interactive, time_t now)
 	    unthrottle(gthrottle, now);
 	    gthrottle = 0;
 	}
-
 	if (p->what == IGNORE)
 	    return 1;
 	else {
@@ -516,6 +515,7 @@ match(struct pattern *p, char *line, int size, int interactive, time_t now)
 		}
 		unthrottle(p, now);
 	    }
+	    p->when = now;
 	    return run(p, line, size, flags, localtime(&now), argc, argv);
 	}
     }
