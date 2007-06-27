@@ -73,6 +73,8 @@ FILE *pipefd = 0;
 struct command *pipecmd;
 
 struct pattern *gthrottle = 0;	/* current use=regex throttle */
+int throttled = 0;		/* how many throttles are running? */
+time_t expiration;		/* when the next throttle expires */
 struct pattern *patterns;	/* for cleanup() */
 
 
@@ -376,6 +378,7 @@ run(struct pattern *p, char *s, int size, int flags,
 				free(q->c.throttle.msg);
 			    q->c.throttle.msg = expand(s,size,"$@",ac,av);
 			}
+			throttled ++ ;
 			break;
 	    case QUIT:	die = 1;
 			break;
@@ -394,11 +397,14 @@ run(struct pattern *p, char *s, int size, int flags,
 void
 unthrottle(struct pattern *p, time_t now)
 {
-    run(p, 0, 0, THROTTLED, localtime(&now), 0, 0);
-    p->count = 0;
-    p->throttle = 0;
-    p->delay = 0;
-    p->trigger = 0;
+    if (p->throttle) {
+	run(p, 0, 0, THROTTLED, localtime(&now), 0, 0);
+	p->count = 0;
+	p->throttle = 0;
+	p->delay = 0;
+	p->trigger = 0;
+	--throttled;
+    }
 } /* unthrottle */
 
 
@@ -426,22 +432,45 @@ match(struct pattern *p, char *line, int size, int interactive, time_t now)
 		int ok;
 		char *m = expand(line, size, "$@", argc, argv);
 
-		ok = p->trigger->c.throttle.msg && !strcmp(p->trigger->c.throttle.msg, m);
+#define T	(p->trigger->c.throttle)
+		ok = T.msg && !strcmp(T.msg, m);
+#undef T
 		free(m);
 
 		if (ok) {
 		    p->count++;
 		    return 1;
 		}
-	    }
-	    if (p->count || (p->throttle > now))
 		unthrottle(p, now);
+	    }
 	    return run(p, line, size, flags, localtime(&now), argc, argv);
 	}
     }
 
     return 0;
 } /* match */
+
+
+/*
+ * setalarm() if any throttles are running
+ */
+void
+setalarm()
+{
+    alarm(0);
+
+    if (throttled) {
+	struct pattern *q;
+	time_t now = time(0);
+	time_t next = 0;
+
+	for (q = patterns; q; q = q->next)
+	    if (q->throttle && (next == 0 || q->throttle < next))
+		next = q->throttle;
+
+	alarm( (next > now) ? (next-now) : 10);
+    }
+} /* setalarm */
 
 
 /*
@@ -454,14 +483,23 @@ scan(FILE *file, struct pattern *p)
     char *text;
     void *f;
     int len;
+    time_t now;
+    int remainder;
 
     if ( (f = newchunk(file, eol)) ) {
 	while ( (text = getchunk(f, &len)) ) {
-	    for (q = p; q; q = q->next)
-		if (match(q, text, len, 0, time(0)))
+	    alarm(0);
+	    now = time(0);
+	    for (q = p; q; q = q->next) {
+		if (q->throttle && (q->throttle <= now))
+		    unthrottle(q, now);
+		else if (match(q, text, len, 0, now))
 		    break;
+	    }
+	    setalarm();
 	}
 	freechunk(f);
+	alarm(0);
     }
 } /* scan */
 
@@ -581,12 +619,34 @@ cleanup(int sig)
     time_t now = time(0);
 
     for (p=patterns; p; p = p->next)
-	if (p->count || (p->throttle > now))
+	if (p->count)
 	    unthrottle(p, now);
 
     if (pipefd) pclose(pipefd);
     exit(0);
 } /* cleanup */
+
+
+/*
+ * walk the list of patterns seeing if anything has timed out
+ */
+void
+expire(int sig)
+{
+    struct pattern *p;
+    time_t now = time(0);
+
+    alarm(0);
+    if (gthrottle && (gthrottle->throttle <= now)) {
+	unthrottle(gthrottle, now);
+	gthrottle = 0;
+    }
+    for (p=patterns; p; p = p->next) {
+	if (p->throttle && (p->throttle <= now))
+	    unthrottle(p, now);
+    }
+    setalarm();
+} /* expire */
 
 
 float
@@ -606,7 +666,7 @@ main(int argc, char **argv)
 
     getoptionsandscript(argc, argv);
 
-    isadaemon = (tflag | pflag) && !(Dflag || fflag || dflag);
+    isadaemon = (tflag || pflag) && !(Dflag || fflag || dflag);
 
     /* don't buffer output when it's going to a file
      */
@@ -661,10 +721,8 @@ main(int argc, char **argv)
 	    else
 		exit(1);
 	}
-	else if (pid == 0) {
-	    argv[0] = "B1FF!";
+	else if (pid == 0) 
 	    break;
-	}
 	else do {
 	    rc = wait(&status);
 	} while (rc != pid && kill(pid, 0) == 0);
@@ -679,7 +737,7 @@ main(int argc, char **argv)
     signal(SIGTERM, cleanup);
     signal(SIGINT,  cleanup);
     signal(SIGHUP,  cleanup);
-    signal(SIGALRM, cleanup);
+    signal(SIGALRM, expire);
 
 
     if (cfgfile == 0) {
