@@ -34,11 +34,10 @@
  *  THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <stdio.h>
+#include <string.h>
 #include "y.tab.h"
 
 int line_number = 1;
-
-#define yywrap() 1
 %}
 %%
 
@@ -129,3 +128,5 @@ defaultinput(char *rules)
 
     return 1;
 }
+
+int yywrap() { return 1; }
