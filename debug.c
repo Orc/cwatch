@@ -33,6 +33,8 @@
  *  THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdio.h>
+
 #include "debug.h"
 #include "cwatch.h"
 

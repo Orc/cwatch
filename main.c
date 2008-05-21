@@ -32,7 +32,13 @@
  *  IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  *  THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "config.h"
+
 #include <stdio.h>
+
+#include <stdlib.h>
+#include <unistd.h>
+
 #include <string.h>
 #if HAVE_MALLOC_H
 #   include <malloc.h>
@@ -42,11 +48,9 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <signal.h>
 #include <errno.h>
 
-#include "config.h"
 #include "cwatch.h"
 #include "getchunk.h"
 
