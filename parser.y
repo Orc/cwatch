@@ -84,7 +84,6 @@
 %token	THROTTLE
 %token	USE
 %token	MESSAGE
-%token	REGEX
 %token	QUIT
 %token	CONTINUE
 %token	WHEN
@@ -105,11 +104,11 @@ input:		  /* empty */
 ;
 
 
-regex:		  REGEX		{ re($1.v.text); }
+regex:		  REGEX		{ re($<v.text>1); }
 ;
 
 statement:	  WATCHFOR regex commands	{ statement(WATCHFOR); }
-		| IGNORE REGEX			{   re($2.v.text);
+		| IGNORE REGEX			{   re($<v.text>2);
 						    statement(IGNORE);
 						}
 ;
@@ -141,13 +140,13 @@ colors:		  /* empty */
 		| colors color
 ;
 
-days		: NUMBER		{ if (!day($1.v.num, 0)) YYERROR; }
-		| NUMBER DASH NUMBER	{ if (!day($1.v.num, $3.v.num)) YYERROR; }
+days		: NUMBER		{ if (!day($<v.num>1, 0)) YYERROR; }
+		| NUMBER DASH NUMBER	{ if (!day($<v.num>1, $<v.num>3)) YYERROR; }
 		| days COMMA days
 ;
 
-hours		: NUMBER		{ if (!hour($1.v.num, 0)) YYERROR; }
-		| NUMBER DASH NUMBER	{ if (!hour($1.v.num, $3.v.num)) YYERROR; }
+hours		: NUMBER		{ if (!hour($<v.num>1, 0)) YYERROR; }
+		| NUMBER DASH NUMBER	{ if (!hour($<v.num>1, $<v.num>3)) YYERROR; }
 		| hours COMMA hours
 ;
 
@@ -158,11 +157,11 @@ opts		: /* empty */
 		|  when
 ;
 
-exec:		  EXEC WORD	{ cmdline($2.v.text); }
+exec:		  EXEC WORD	{ cmdline($<v.text>2); }
 ;
 
 number:		  /* empty */
-		| NUMBER		{ nrbell($1.v.num); }
+		| NUMBER		{ nrbell($<v.num>1); }
 ;
 
 bell:		  BELL number
@@ -172,11 +171,11 @@ pipeflags:	  /* empty */
 		| COMMA KEEP_OPEN 	{ keep_open(); }
 ;
 
-pipe:		   PIPE WORD pipeflags { cmdline($2.v.text); }
+pipe:		   PIPE WORD pipeflags { cmdline($<v.text>2); }
 ;
 
-address:	  WORD			{ address($1.v.text); }
-		| address COLON WORD	{ address($3.v.text); }
+address:	  WORD			{ address($<v.text>1); }
+		| address COLON WORD	{ address($<v.text>3); }
 ;
 
 write:		  WRITE address
@@ -184,7 +183,7 @@ write:		  WRITE address
 
 timespec:	  NUMBER COLON NUMBER COLON NUMBER
 {
-    delay($1.v.num, $3.v.num, $5.v.num);
+    delay($<v.num>1, $<v.num>3, $<v.num>5);
 }
 ;
 
@@ -202,7 +201,7 @@ throttle:	  THROTTLE timespec
 ;
 
 mailflags:	  ADDRESSES EQUAL address
-		| SUBJECT EQUAL WORD	{ subject($3.v.text); }
+		| SUBJECT EQUAL WORD	{ subject($<v.text>3); }
 		| when
 ;
 
