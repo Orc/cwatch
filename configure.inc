@@ -889,8 +889,10 @@ AC_FAIL() {
 #
 # AC_SUB writes a substitution into config.sub
 AC_SUB() {
-    (   _subst=`echo $2 | sed -e 's/;/\\;/g'`
-	echo "s;@$1@;$_subst;g" ) >> $__cwd/config.sub
+    (   echononl "s;@$1@;"
+	_subst=`echo $2 | sed -e 's/;/\\;/g'`
+	echononl "$_subst"
+	echo ';g' ) >> $__cwd/config.sub
 }
 
 #

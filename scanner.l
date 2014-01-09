@@ -15,7 +15,7 @@
  *     software must display the following acknowledgement:
  *     
  *   This product includes software developed by David Parsons
- *   (orc@pell.chi.il.us)
+ *   (orc@pell.portland.or.us)
  *
  *  4. My name may not be used to endorse or promote products derived
  *     from this software without specific prior written permission.
@@ -34,10 +34,11 @@
  *  THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <stdio.h>
-#include <string.h>
 #include "y.tab.h"
 
 int line_number = 1;
+
+#define yywrap() 1
 %}
 %%
 
@@ -128,5 +129,3 @@ defaultinput(char *rules)
 
     return 1;
 }
-
-int yywrap() { return 1; }
