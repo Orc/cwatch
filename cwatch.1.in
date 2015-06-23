@@ -294,7 +294,7 @@ which is open source software, written by Philip Hazel, and copyright
 by the University of Cambridge, England.
 
 .SH AUTHOR
-David Parsons <orc@pell.chi.il.us>
+David Parsons <orc@pell.portland.or.us>
 .SH SEE ALSO
 .BR syslog.conf (5),
 .BR syslogd (8).
