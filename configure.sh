@@ -45,8 +45,7 @@ fi
 # for lprng doesn't have any options.
 #
 if AC_CHECK_HEADERS basis/options.h; then
-    if LIBS="-lbasis" AC_CHECK_FUNCS x_getopt; then
-	AC_LIBS="$AC_LIBS -lbasis"
+    if AC_LIBRARY x_getopt -lbasis; then
 	HAVE_XGETOPT=T
     fi
 fi
