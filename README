@@ -1,0 +1,9 @@
+This is my attempt at doing a swatchalike in C; it implements, fuzzily,
+about 95% of what the perl version does (at least as far as I can
+interpret the documentation & the perl source of the original.)
+
+I am not a system administrator anymore (I administer a few machines
+scattered around, but they're the standard Linux style of being boxes
+without users, just service providers) so I don't use this code much
+myself.  But I think it's still useful on the occasional time I need to
+have some sort of log sweeper running.
