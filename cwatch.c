@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2002 David Parsons. All rights reserved.
+ *   Copyright (c) 2002-2017 David Parsons. All rights reserved.
  *   
  *   Redistribution and use in source and binary forms, with or without
  *   modification, are permitted provided that the following conditions
@@ -15,9 +15,6 @@
  *     
  *   This product includes software developed by David Parsons
  *   (orc@pell.portland.or.us)
- *
- *  4. My name may not be used to endorse or promote products derived
- *     from this software without specific prior written permission.
  *     
  *  THIS SOFTWARE IS PROVIDED BY DAVID PARSONS ``AS IS'' AND ANY
  *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
