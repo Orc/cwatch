@@ -28,7 +28,8 @@ clean:
 	rm -f $(PROGS)
 
 distclean spotless: clean
-	rm -f Makefile config.* y.output cwatch.1 cwatch.h
+	rm -f y.output
+	rm -f @GENERATED_FILES@ @CONFIGURE_FILES@
 
 install: VERSION install.man install.bin
 
