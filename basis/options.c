@@ -33,6 +33,7 @@ static const char rcsid[] = "$Id: s.options.c 1.8 00/02/01 22:42:44-00:00 orc $"
  * x_getopt() another version of long argument lists
  */
 #include <stdio.h>
+#include <string.h>
 #include "options.h"
 
 int x_optind = 1;

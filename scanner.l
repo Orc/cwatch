@@ -35,7 +35,9 @@
 
 int line_number = 1;
 
-#define yywrap() 1
+extern int yywrap();
+
+int yywrap() { return 1; }
 %}
 %%
 

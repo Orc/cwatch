@@ -66,6 +66,7 @@ AC_CHECK_FUNCS basename
 AC_CHECK_FUNCS mmap
 AC_CHECK_FUNCS memmove
 AC_CHECK_FUNCS setlinebuf
+AC_CHECK_HEADERS libgen.h
 
 AC_SUB VERSION `test -f VERSION && cat VERSION`
 

@@ -31,8 +31,14 @@
  */
 #include <stdio.h>
 #include <string.h>
+
+#include "config.h"
+
 #if HAVE_MALLOC_H
 #   include <malloc.h>
+#endif
+#if HAVE_LIBGEN_H
+#   include <libgen.h>
 #endif
 #include <time.h>
 #include <sys/types.h>
@@ -758,7 +764,7 @@ expire(int sig)
 } /* expire */
 
 
-float
+int
 main(int argc, char **argv)
 {
     time_t t;

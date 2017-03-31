@@ -49,7 +49,6 @@
 
 %token	WATCHFOR
 %token	IGNORE
-%token	REGEX
 
 %token	ECHO
 %token	NORMAL

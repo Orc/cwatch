@@ -56,6 +56,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <string.h>
 
 #include "config.h"
 
