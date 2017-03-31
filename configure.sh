@@ -25,7 +25,7 @@ if ! AC_PROG_LEX; then
     exit 1
 fi
 if ! AC_PROG_YACC; then
-    LOG "You need yacc or bison to build cwatch"
+    LOG "You need yacc to build cwatch"
     exit 1
 fi
 if AC_CHECK_HEADERS pcre.h; then
