@@ -1597,7 +1597,7 @@ AC_PROG_CPP () {
     unset fail
     LOGN "Looking for cpp"
     
-    if acCheckCPP $AC_CC -E; then
+    if acCheckCPP "$AC_CC" -E; then
 	TLOG " (using $AC_CC -E as a cpp pipeline)"
 	return 0
     fi
