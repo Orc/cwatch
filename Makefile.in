@@ -1,6 +1,7 @@
 OBJS    = y.tab.o lex.yy.o cwatch.o main.o debug.o getchunk.o @XGETOPT@
 LDADD   = @LIBS@
 CC	= @CC@
+CFLAGS  = @CFLAGS@
 MANDIR  = @mandir@
 BINDIR  = @exedir@
 PROGS   = cwatch
