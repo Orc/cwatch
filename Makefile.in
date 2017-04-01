@@ -2,6 +2,7 @@ OBJS    = y.tab.o lex.yy.o cwatch.o main.o debug.o getchunk.o @XGETOPT@
 LDADD   = @LIBS@
 CC	= @CC@
 CFLAGS  = @CFLAGS@
+LDFLAGS = @LDFLAGS@
 MANDIR  = @mandir@
 BINDIR  = @exedir@
 PROGS   = cwatch
@@ -10,7 +11,7 @@ MANPAGES= cwatch.1
 all: $(PROGS)
 
 cwatch: $(OBJS)
-	$(CC) $(CFLAGS) -o cwatch $(OBJS) $(LDADD)
+	$(CC) $(LDFLAGS) -o cwatch $(OBJS) $(LDADD)
 
 lex.yy.c: scanner.l y.tab.h 
 	@LEX@ -l -i $(LEX_DEBUG) scanner.l
