@@ -630,7 +630,7 @@ dopipe(struct pattern *p)
 
     if ( (file = popen(input, "r")) == 0) {
 	perror(input);
-	exit(1);
+	exit(99);
     }
     scan(file, p);
     pclose(file);
@@ -649,7 +649,7 @@ dotail(struct pattern *p)
 
     if (access(input, R_OK) != 0) {
 	perror(input);
-	exit(1);
+	exit(99);
     }
     if (cmd = malloc(strlen(input) + strlen(tailcmd) + 3)) {
 	sprintf(cmd, "%s %s", tailcmd, input);
