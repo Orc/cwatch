@@ -575,9 +575,9 @@ restart_alarm()
 	    min = rplus % 60;
 
 	    /* hours delay */
-	    delay =  60 * ((t->tm_hour - hr) + (hr < t->tm_hour) ? 24 : 0);
+	    delay =  60 * ((t->tm_hour - hr) + ((hr < t->tm_hour) ? 24 : 0));
 	    /* plus minutes delay */
-	    delay += (t->tm_min - min) + (min < t->tm_min) ? 60 : 0;
+	    delay += (t->tm_min - min) + ((min < t->tm_min) ? 60 : 0);
 
 	    alarm(60*delay);
 	}
