@@ -1,1 +1,0 @@
-main() { puts("hello, sailor!"); }
