@@ -45,6 +45,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
@@ -575,9 +576,9 @@ restart_alarm()
 	    min = rplus % 60;
 
 	    /* hours delay */
-	    delay =  60 * ((t->tm_hour - hr) + ((hr < t->tm_hour) ? 24 : 0));
+	    delay =  60 * ((t->tm_hour - hr) + ((hr > t->tm_hour) ? 24 : 0));
 	    /* plus minutes delay */
-	    delay += (t->tm_min - min) + ((min < t->tm_min) ? 60 : 0);
+	    delay += (t->tm_min - min) + ((min > t->tm_min) ? 60 : 0);
 
 	    alarm(60*delay);
 	}
@@ -825,6 +826,9 @@ main(int argc, char **argv)
 	/* Ignore the signals we aren't interested in */
 	for (i=0; i < NSIG; i++)
 	    signal(i, SIG_IGN);
+
+	/* except for this one */
+	signal(SIGCHLD, SIG_DFL);
 
 	/* if the parent gets a kill, kill all children and die */
 	signal(SIGINT,  alldie);
