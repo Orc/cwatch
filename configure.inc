@@ -1121,7 +1121,7 @@ EOF
 	Q=\'
 	cat - > config.cmd << EOF
 #! /bin/sh
-${CC:+CC=${Q}${CC}${Q}} ${CFLAGS:+CFLAGS=${Q}${CFLAGS}${Q}} $ac_progname $ac_configure_command
+${CC:+CC=${Q}${CC}${Q}} ${CFLAGS:+CFLAGS=${Q}${CFLAGS}${Q}} ${LDFLAGS:+LDFLAGS=${Q}${LDFLAGS}${Q}} $ac_progname $ac_configure_command
 EOF
 	chmod +x config.cmd
 
