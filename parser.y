@@ -41,10 +41,8 @@
 %}
 
 %union {
-	struct { 
-	    long num;
-	    char *text;
-	} v;
+    long num;
+    char *text;
 }
 
 %token	WATCHFOR
@@ -80,7 +78,7 @@
 %token	THROTTLE
 %token	USE
 %token	MESSAGE
-%token	REGEX
+%token	<text> REGEX
 %token	QUIT
 %token	CONTINUE
 %token	WHEN
@@ -88,8 +86,8 @@
 %token	ADDRESSES
 %token	SUBJECT
 %token	NL
-%token	NUMBER
-%token	WORD
+%token	<num> NUMBER
+%token	<text> WORD
 %token	COMMA
 %token	COLON
 %token	EQUAL
@@ -101,11 +99,11 @@ input:		  /* empty */
 ;
 
 
-regex:		  REGEX		{ re($1.v.text); }
+regex:		  REGEX		{ re($1); }
 ;
 
 statement:	  WATCHFOR regex commands	{ statement(WATCHFOR); }
-		| IGNORE REGEX			{   re($2.v.text);
+		| IGNORE REGEX			{   re($2);
 						    statement(IGNORE);
 						}
 ;
@@ -137,13 +135,13 @@ colors:		  /* empty */
 		| colors color
 ;
 
-days		: NUMBER		{ if (!day($1.v.num, 0)) YYERROR; }
-		| NUMBER DASH NUMBER	{ if (!day($1.v.num, $3.v.num)) YYERROR; }
+days		: NUMBER		{ if (!day($1, 0)) YYERROR; }
+		| NUMBER DASH NUMBER	{ if (!day($1, $3)) YYERROR; }
 		| days COMMA days
 ;
 
-hours		: NUMBER		{ if (!hour($1.v.num, 0)) YYERROR; }
-		| NUMBER DASH NUMBER	{ if (!hour($1.v.num, $3.v.num)) YYERROR; }
+hours		: NUMBER		{ if (!hour($1, 0)) YYERROR; }
+		| NUMBER DASH NUMBER	{ if (!hour($1, $3)) YYERROR; }
 		| hours COMMA hours
 ;
 
@@ -154,11 +152,11 @@ opts		: /* empty */
 		|  when
 ;
 
-exec:		  EXEC WORD	{ cmdline($2.v.text); }
+exec:		  EXEC WORD	{ cmdline($2); }
 ;
 
 number:		  /* empty */
-		| NUMBER		{ nrbell($1.v.num); }
+		| NUMBER		{ nrbell($1); }
 ;
 
 bell:		  BELL number
@@ -168,11 +166,11 @@ pipeflags:	  /* empty */
 		| COMMA KEEP_OPEN 	{ keep_open(); }
 ;
 
-pipe:		   PIPE WORD pipeflags { cmdline($2.v.text); }
+pipe:		   PIPE WORD pipeflags { cmdline($2); }
 ;
 
-address:	  WORD			{ address($1.v.text); }
-		| address COLON WORD	{ address($3.v.text); }
+address:	  WORD			{ address($1); }
+		| address COLON WORD	{ address($3); }
 ;
 
 write:		  WRITE address
@@ -180,7 +178,7 @@ write:		  WRITE address
 
 timespec:	  NUMBER COLON NUMBER COLON NUMBER
 {
-    delay($1.v.num, $3.v.num, $5.v.num);
+    delay($1, $3, $5);
 }
 ;
 
@@ -198,7 +196,7 @@ throttle:	  THROTTLE timespec
 ;
 
 mailflags:	  ADDRESSES EQUAL address
-		| SUBJECT EQUAL WORD	{ subject($3.v.text); }
+		| SUBJECT EQUAL WORD	{ subject($3); }
 		| when
 ;
 

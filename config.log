@@ -1,0 +1,60 @@
+[echo -n] works
+Configuring for [cwatch]
+checking out the C compiler
+validating CFLAGS=-I/usr/local/include
+validating LDFLAGS=-L/usr/local/lib
+-rwxr-xr-x   1 orc     users       4288 Mar 31 22:19 ngc69448
+-rw-r--r--   1 orc     users         61 Mar 31 22:19 ngc69448.c
+-rw-r--r--   1 orc     users        896 Mar 31 22:19 ngc69448.o
+Looking for cpp
+CPP=[cc], CPPFLAGS=[-E -I/usr/local/include]
+looking for install
+ (/usr/bin/install)
+lex is /usr/bin/lex
+Looking for the yywrap function
+looking for the yywrap function
+/tmp/cc5jsSzC.o: In function `main':
+/tmp/cc5jsSzC.o(.text+0x7): undefined reference to `yywrap'
+offending command was:
+void yywrap();
+int main()
+{
+
+    yywrap();
+}
+cc -I/usr/local/include -L/usr/local/lib -o ngc69448 ngc69448.c 
+looking for the yywrap function
+ (in -ll)
+yacc is /usr/bin/yacc
+looking for header pcre.h
+ (found)
+Looking for the pcre_compile function
+looking for the pcre_compile function
+/tmp/ccvZBMFG.o: In function `main':
+/tmp/ccvZBMFG.o(.text+0x7): undefined reference to `pcre_compile'
+offending command was:
+void pcre_compile();
+int main()
+{
+
+    pcre_compile();
+}
+cc -I/usr/local/include -L/usr/local/lib -o ngc69448 ngc69448.c  -ll
+looking for the pcre_compile function
+ (in -lpcre)
+looking for header basis/options.h
+ngc69448.c:2: basis/options.h: No such file or directory
+ (not found)
+sendmail is /usr/sbin/sendmail
+looking for the basename function
+looking for the mmap function
+looking for the memmove function
+looking for the setlinebuf function
+looking for header libgen.h
+ (found)
+find is /usr/bin/find
+/bin/ln exists, and ln -s works
+sed is /usr/bin/sed
+generating Makefile
+generating cwatch.h
+generating cwatch.1

@@ -83,15 +83,15 @@ regex			{ return REGEX; }
 	
 #[^\n]*			;
 \n			{ line_number++; }
-0x[0-9a-fA-F]+		{ yylval.v.num = strtol(yytext, 0, 16); return NUMBER; }
-0[0-9]*			{ yylval.v.num = strtol(yytext, 0, 8); return NUMBER; }
-[1-9][0-9]*		{ yylval.v.num = atoi(yytext); return NUMBER; }
+0x[0-9a-fA-F]+		{ yylval.num = strtol(yytext, 0, 16); return NUMBER; }
+0[0-9]*			{ yylval.num = strtol(yytext, 0, 8); return NUMBER; }
+[1-9][0-9]*		{ yylval.num = atoi(yytext); return NUMBER; }
 "/"[^/]*		{   if (yytext[yyleng-1] == '\\')
 				yymore();
 			    else {
 				input();
-				yylval.v.text = realloc(yylval.v.text, yyleng);
-				strcpy(yylval.v.text, 1+yytext);
+				yylval.text = realloc(yylval.text, yyleng);
+				strcpy(yylval.text, 1+yytext);
 				return REGEX;
 			    }
 			}
@@ -99,14 +99,14 @@ regex			{ return REGEX; }
 				yymore();
 			    else {
 				input();
-				yylval.v.text = realloc(yylval.v.text, yyleng);
-				strcpy(yylval.v.text, 1+yytext);
+				yylval.text = realloc(yylval.text, yyleng);
+				strcpy(yylval.text, 1+yytext);
 				return WORD;
 			    }
 			}
 [a-zA-Z0-9.@!]+		{
-			    yylval.v.text = realloc(yylval.v.text, yyleng);
-			    strcpy(yylval.v.text, yytext);
+			    yylval.text = realloc(yylval.text, yyleng);
+			    strcpy(yylval.text, yytext);
 			    return WORD;
 			}
 ":"			{ return COLON; }

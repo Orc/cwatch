@@ -1,0 +1,300 @@
+.TH cwatch 1 "0.96" "%E%" \" -*- nroff -*-
+.SH NAME
+cwatch \- a simple log file watcher, written in C
+.SH SYNOPSIS
+.B cwatch
+.RB [ \-c
+.IR file ]
+.RB [ \-F
+.IR re ]
+.RB [ \-t
+.IR file ]
+.RB [ \-p
+.IR command ]
+.RB [ \-f
+.IR file ]
+.RB [ \-r
+.IR restart-time ]
+.RB [ \-v ]
+.RB [ \--help ]
+.RB [ \--dump-script ]
+.RB [ \--pid-file
+.IR file ]
+.RB [ \--daemon ]
+.SH DESCRIPTION
+.B cwatch
+monitors a system log for interesting information.   It attempts to
+be a clone of the well-known
+.B swatch
+program as much as possible, but without having to drag masses of
+.I perl
+modules into your system.
+
+If
+.B cwatch
+catches a
+.B HUP
+or
+.B ALRM
+signal, it will attempt to re-read the configuration file and restart.
+When 
+.B cwatch
+catches a
+.BR TERM , QUIT
+or
+.B INT
+signal, it terminates as gracefully as it can.
+
+.SH OPTIONS
+.TP
+.BI \-c \ file
+Use 
+.B file
+as the configuration file.  If you don't specify a configuration
+file,
+.B cwatch
+attempts to open
+.IR $HOME /.cwatchrc
+and if that fails, it uses the builtin configuration of
+.nf
+watchfor /.*/
+    echo
+.fi
+.TP
+.B \--help
+Displays usage information, then exits.
+.TP
+.BI \-F \ re
+Log records are separated by 
+.I re
+instead of by newlines.
+.TP
+.B \-V
+Display the version information, then exit.
+.TP
+.BI \-t \ file
+Examine lines of text as they are added to 
+.IR file .
+(This is the same as
+.IR "\-p cat\ file" )
+.TP
+.BI \-p \ command
+Examine input piped from
+.IR command .
+.TP
+.BI \-f \ file
+Do a single pass through
+.IR file .
+.TP
+.BI \-r \ restart-time
+Restart
+.B cwatch
+at the given time.   The 
+.I restart-time
+may be given as an absolute time in the form
+.IR HH : MM [ am|pm ],
+which means that
+.B cwatch
+will restart every day at the specified time,
+or it may be a delay in the form
+.IR HH : MM ,
+which means that 
+.B cwatch
+will restart every
+.IR HH : MM 
+after you start it.
+.TP
+.B \--dump-script
+For debugging only.  Display the (parsed) contents of the configuration
+file, then exit.
+.PP
+If 
+.B cwatch
+is called without any input option, it defaults to
+.IR "\-t /var/log/syslog" .
+.TP
+.B \--daemon
+When this option is given, 
+.B cwatch
+will exit when it receives a
+.B SIGHUP
+or
+.B
+SIGALRM
+signal.
+(This means that the 
+.B \-r
+option will not work with \--daemon.)
+.TP
+.BI \--pid-file \ file
+Write the process id of the supervisor process to
+.I file
+as a human-readable string suitable for passing as an argument to
+a program (like, oh,
+.I kill
+.B \-HUP
+.IR `cat\ file` )
+
+.SH THE CONFIGURATION FILE
+.B cwatch
+attempts to closely follow the format of the
+.B swatch
+.RI ( v3 )
+configuration file, with some differences having to do with
+how it parses the configuration files.
+
+A configuration file is made up of a series of patterns with
+actions associated with them.  The patterns are either
+
+.TP
+.BI watchfor\  regex
+If the pattern is seen, do the associated actions.
+.TP
+.BI ignore\  regex
+If the pattern is seen, do nothing with it.  
+.PP
+Unlike
+.BR swatch ,
+.B cwatch
+only accepts a single pattern regex per pattern, so common
+.B swatch
+expressions like
+.nf
+ignore /foo/,/bar/,/fu/
+.fi
+are isallowed;  you need to rewrite them as
+.nf
+ignore /foo|bar|fu/
+.fi
+
+.B watchfor
+patterns take a collection of actions 
+.RB ( "quoted"
+strings MUST be quoted with double-quotes, unlike 
+.BR swatch ,
+where text can be tossed in any old way.)
+.TP
+.B echo\ [modes]
+Echo the matched line.  The text mode may be
+.IR normal ,
+.IR bold ,
+.IR underscore ,
+.IR blink ,
+.IR inverse ,
+.IR black ,
+.IR red ,
+.IR green ,
+.IR yellow ,
+.IR blue ,
+.IR magenta ,
+.IR cyan ,
+.IR white ,
+.IR black_h ,
+.IR red_h ,
+.IR green_h ,
+.IR yellow_h ,
+.IR blue_h ,
+.IR magenta_h ,
+.IR cyan_h ,
+and/or
+.IR white_h .
+The
+.I _h
+colors specify a highlighting color.
+.TP
+.B bell\ [N]
+Ring the terminal bell 
+.BR N (default=1)
+times.
+.TP
+.B exec\ \"command\"
+Execute
+.IR command .
+The 
+.I command
+may contain variables which are substituted with fields from the
+matched line.  A 
+.I $N
+will be replaced by the
+.IR N th
+filed in the line.  A 
+.I $0
+or 
+.I $*
+will be replaced by the entire line.
+.TP
+.B mail\ [addresses=to:to:...][,subject=\fItext\fB]
+Send mail to
+.I address(es)
+containing the matched lines as they appear.  If you don't give addresses
+to mail the letter to, it will be sent to the user who is running the
+program.)
+.B pipe\ \"command\"\ [,keep_open]
+Pipe matched lines into
+.IR command .
+.B keep_open
+forces the pipe to stay open until a different pipe action is run or
+until swatch exits.
+.TP
+.B write\ [user:user:user]
+.B write(1)
+the matched lines to 
+.IR user(s) .
+.TP
+.B throttle\ hours:minutes:seconds\ [,use=message|regex]
+Limit the number of times that the matched pattern has actions performed
+on it.  Once a command is
+.BR throttle d,
+nothing except 
+.B continue
+takes effect until after the delay given.
+The 
+.B use=
+option is either
+.IR regex ,
+which means that the throttling continues until
+some other waitfor pattern is matched, or 
+.IR message ,
+which means that the throttling continues until
+the pattern matches a string that's different from
+the one it originally matched.
+.TP
+.B continue
+Causes
+.B cwatch
+to match other patterns after it is done with the current one.
+.TP
+.B quit
+.B cwatch
+cleans up and exits.
+.PP
+All of these options except
+.B quit
+also take the
+.B when
+argument;
+.TP
+.B when=days:hours
+Only perform the action on the specified days and hours. for example
+.nb
+.B "bell 10 when=1-5:4"
+.be
+means that the 
+.B bell
+command only runs at teatime on weekdays.
+
+.SH BUGS
+The 
+.B echo
+modes are not yet implemented.
+
+.SH COPYRIGHTS
+Regular expression support is provided by the PCRE library package,
+which is open source software, written by Philip Hazel, and copyright
+by the University of Cambridge, England.
+
+.SH AUTHOR
+David Parsons <orc@pell.portland.or.us>
+.SH SEE ALSO
+.BR syslog.conf (5),
+.BR syslogd (8).
