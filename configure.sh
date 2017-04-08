@@ -15,19 +15,12 @@ TARGET=cwatch
 #
 AC_INIT cwatch
 
-if ! AC_PROG_CC; then
-    LOG "You need to have a functional C compiler to build cwatch"
-    exit 1
-fi
+AC_PROG_CC  || AC_FAIL "You need a functional C compiler to build cwatch"
+AC_PROG_LEX || AC_FAIL "You need lex or flex to build cwatch"
+AC_PROG_YACC|| AC_FAIL "You need yacc to build cwatch"
 
-if ! AC_PROG_LEX; then
-    LOG "You need lex or flex to build cwatch"
-    exit 1
-fi
-if ! AC_PROG_YACC; then
-    LOG "You need yacc to build cwatch"
-    exit 1
-fi
+unset _MK_LIBRARIAN	# not building libraries
+
 if AC_CHECK_HEADERS pcre.h; then
     if ! AC_LIBRARY pcre_compile -lpcre ; then
 	LOG "Your system appears to have pcre.h without the pcre library?"
