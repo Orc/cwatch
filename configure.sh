@@ -15,11 +15,10 @@ TARGET=cwatch
 #
 AC_INIT cwatch
 
-AC_PROG_CC  || AC_FAIL "You need a functional C compiler to build cwatch"
+AC_PROG_CC || AC_FAIL "You need to have a functional C compiler to build cwatch"
 AC_PROG_LEX || AC_FAIL "You need lex or flex to build cwatch"
-AC_PROG_YACC|| AC_FAIL "You need yacc to build cwatch"
-
-unset _MK_LIBRARIAN	# not building libraries
+AC_PROG_YACC || AC_FAIL "You need yacc to build cwatch"
+unset _MK_LIBRARIAN
 
 if AC_CHECK_HEADERS pcre.h; then
     if ! AC_LIBRARY pcre_compile -lpcre ; then
@@ -32,11 +31,6 @@ else
     exit 1
 fi
 
-
-# don't bother to check for options.h unless we're not
-# being built against lprng -- remember that magicfilter
-# for lprng doesn't have any options.
-#
 if AC_CHECK_HEADERS basis/options.h; then
     if AC_LIBRARY x_getopt -lbasis; then
 	HAVE_XGETOPT=T

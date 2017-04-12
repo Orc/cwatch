@@ -33,8 +33,6 @@
 #if HAVE_MALLOC_H
 #   include <malloc.h>
 #endif
-#include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include <pwd.h>
 #include <sys/types.h>

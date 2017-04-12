@@ -30,7 +30,8 @@ clean:
 	rm -f $(PROGS)
 
 distclean spotless: clean
-	@DISTCLEAN@ y.output @GENERATED_FILES@ @CONFIGURE_FILES@
+	rm -f y.output
+	rm -f @GENERATED_FILES@ @CONFIGURE_FILES@
 
 install: VERSION install.man install.bin
 
