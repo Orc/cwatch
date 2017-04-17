@@ -24,7 +24,7 @@ if AC_CHECK_HEADERS pcre.h; then
     if ! AC_LIBRARY pcre_compile -lpcre ; then
 	LOG "Your system appears to have pcre.h without the pcre library?"
 	LOG "Please install it (http://www.pcre.org) to build cwatch"
-	exit 1
+	AC_FAIL 1
     fi
 else
     LOG "You must have the pcre library (http://www.pcre.org) to build cwatch"
