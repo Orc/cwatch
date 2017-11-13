@@ -76,6 +76,9 @@ struct pattern *compile();
 char *cmdname(int);
 void dump(struct pattern *);
 
+int openinput(char*);
+int defaultinput(char*);
+
 #define	MAILPROG	"@MAIL@"
 #define VERSION		"@VERSION@"
 
